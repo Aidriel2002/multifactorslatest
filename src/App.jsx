@@ -16,6 +16,7 @@ import PaymentHistory from './pages/billings/PaymentHistory'
 
 import ReportDashboard from './pages/dictreport/ReportDashboard'
 import DowntimeList from './pages/dictreport/DownTimeList';
+import NoUptimePage from './pages/dictreport/NoUptimePage'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -65,6 +66,7 @@ function App() {
           {/* DICT Report */}
           <Route path="/dictreport" element={<ProtectedRoute><ReportDashboard /></ProtectedRoute>} />
           <Route path="/downtime-list" element={<ProtectedRoute><DowntimeList /></ProtectedRoute>} />
+          <Route path="/no-uptime" element={<ProtectedRoute><NoUptimePage /></ProtectedRoute>} />
 
           {/* Settings */}
           <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />

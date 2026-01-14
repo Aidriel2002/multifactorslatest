@@ -306,7 +306,7 @@ const Providers = () => {
                         {formatDueDate(provider.due_day, provider.last_paid_month)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${provider.monthly_payment?.toLocaleString()}
+                        ₱{provider.monthly_payment?.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${

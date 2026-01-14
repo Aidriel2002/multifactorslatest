@@ -5,14 +5,19 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     startTime: '',
     endTime: '',
     cause: '',
+    actionTaken: 'None',
     targetSheet: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [availableSheets, setAvailableSheets] = useState([]);
   const [loadingSheets, setLoadingSheets] = useState(false);
-  const [siteCode, setSiteCode] = useState('');
-  const [rowNumber, setRowNumber] = useState(null);
+  const [processingLog, setProcessingLog] = useState([]);
+
+  // Check if we're in multi-report mode
+  const isMultiMode = Array.isArray(sheet);
+  const sheets = isMultiMode ? sheet : (sheet ? [sheet] : []);
+  const totalReports = sheets.length;
 
   const downtimeCauses = [
     'Power Outage',
@@ -24,11 +29,27 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     'Other'
   ];
 
+  const actionTakenOptions = [
+    'None',
+    'Technical Visit'
+  ];
+
+  const formatForSheets = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return `${String(date.getMonth() + 1).padStart(2, '0')}/` +
+           `${String(date.getDate()).padStart(2, '0')}/` +
+           `${date.getFullYear()} ` +
+           `${String(date.getHours()).padStart(2, '0')}:` +
+           `${String(date.getMinutes()).padStart(2, '0')}:00`;
+  };
+
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
   useEffect(() => {
     if (isOpen && spreadsheetId) {
       fetchAvailableSheets();
+      setProcessingLog([]);
     }
   }, [isOpen, spreadsheetId]);
 
@@ -36,7 +57,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     setLoadingSheets(true);
     try {
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${GOOGLE_API_KEY}`;
-      
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -46,7 +66,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
       const data = await response.json();
       const sheets = data.sheets.map(sheet => sheet.properties.title);
       
-      console.log('[AddDowntime] Available sheets:', sheets);
       setAvailableSheets(sheets);
       
       if (sheets.length > 0 && !formData.targetSheet) {
@@ -60,42 +79,20 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     }
   };
 
-  useEffect(() => {
-    if (sheet) {
-      // Get site code from the SECOND column (Column B / index 1)
-      const entries = Object.entries(sheet).filter(([key]) => key !== '_rowNumber');
-      const columnBValue = entries.length > 1 ? entries[1][1] : (entries[0]?.[1] || '');
-      
-      setSiteCode(columnBValue);
-      setRowNumber(sheet._rowNumber || null);
-      
-      console.log('[AddDowntime] All sheet data:', sheet);
-      console.log('[AddDowntime] Filtered entries:', entries);
-      console.log('[AddDowntime] Site Code from Column B (index 1):', columnBValue);
-      console.log('[AddDowntime] Row Number:', sheet._rowNumber);
-      
-      setFormData(prev => ({
-        ...prev,
-        startTime: '',
-        endTime: '',
-        cause: ''
-      }));
-    }
-  }, [sheet]);
+  const getSiteCode = (sheetData) => {
+    if (!sheetData) return '';
+    const entries = Object.entries(sheetData).filter(([key]) => key !== '_rowNumber' && key !== '_index');
+    return entries.length > 1 ? entries[1][1] : (entries[0]?.[1] || '');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setProcessingLog([]);
 
     if (!formData.startTime) {
       setError('Start time is required');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.endTime) {
-      setError('End time is required');
       setLoading(false);
       return;
     }
@@ -112,34 +109,94 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
       return;
     }
 
-    if (new Date(formData.endTime) <= new Date(formData.startTime)) {
+    if (formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime)) {
       setError('End time must be after start time');
       setLoading(false);
       return;
     }
 
     try {
-      const downtimeData = {
-        ...formData,
-        siteCode: siteCode,
-        rowNumber: rowNumber
+      // Prepare common data for all sites
+      const commonData = {
+        startTime: formatForSheets(formData.startTime),
+        endTime: formData.endTime ? formatForSheets(formData.endTime) : '',
+        cause: formData.cause,
+        actionTaken: formData.actionTaken,
+        targetSheet: formData.targetSheet
       };
 
-      if (onSubmit) {
-        await onSubmit(downtimeData);
+      let successCount = 0;
+      let failCount = 0;
+
+      // Process each site sequentially
+      for (let i = 0; i < sheets.length; i++) {
+        const currentSheet = sheets[i];
+        const siteCode = getSiteCode(currentSheet);
+        
+        setProcessingLog(prev => [...prev, {
+          site: siteCode,
+          status: 'processing',
+          message: `Processing site ${i + 1} of ${totalReports}...`
+        }]);
+
+        try {
+          const downtimeData = {
+            ...commonData,
+            siteCode: siteCode,
+            rowNumber: currentSheet._rowNumber || null
+          };
+
+          console.log(`[AddDowntime] Processing site ${i + 1}/${totalReports}:`, siteCode);
+
+          if (onSubmit) {
+            const result = await onSubmit(downtimeData);
+            
+            setProcessingLog(prev => prev.map((log, idx) => 
+              idx === i ? {
+                ...log,
+                status: 'success',
+                message: `✅ ${siteCode} - Saved to row ${result?.targetRow || 'unknown'}`,
+                row: result?.targetRow
+              } : log
+            ));
+            
+            successCount++;
+            
+            // Small delay between writes to avoid rate limiting
+            if (i < sheets.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
+        } catch (err) {
+          console.error(`[AddDowntime] Failed for site ${siteCode}:`, err);
+          
+          setProcessingLog(prev => prev.map((log, idx) => 
+            idx === i ? {
+              ...log,
+              status: 'error',
+              message: `❌ ${siteCode} - Failed: ${err.message}`
+            } : log
+          ));
+          
+          failCount++;
+        }
+      }
+
+      // Show final summary
+      const summary = `Batch Report Complete!\n✅ Success: ${successCount}\n${failCount > 0 ? `❌ Failed: ${failCount}` : ''}`;
+      
+      if (failCount === 0) {
+        setTimeout(() => {
+          handleClose();
+          alert(summary);
+        }, 1500);
+      } else {
+        setError(`Some reports failed to save. Success: ${successCount}, Failed: ${failCount}`);
       }
       
-      setFormData({ 
-        startTime: '', 
-        endTime: '', 
-        cause: '',
-        targetSheet: availableSheets[0] || ''
-      });
-      setError('');
-      onClose();
     } catch (err) {
-      console.error('[AddDowntime] Error:', err);
-      setError(err.message || 'Failed to add downtime record');
+      console.error('[AddDowntime] Batch processing error:', err);
+      setError(err.message || 'Failed to process batch reports');
     } finally {
       setLoading(false);
     }
@@ -151,24 +208,26 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
         startTime: '', 
         endTime: '', 
         cause: '',
-        targetSheet: ''
+        actionTaken: 'None',
+        targetSheet: availableSheets[0] || ''
       });
       setError('');
+      setProcessingLog([]);
       setAvailableSheets([]);
-      setSiteCode('');
-      setRowNumber(null);
       onClose();
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || sheets.length === 0) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Add Downtime Record</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {isMultiMode ? `Batch Report - ${totalReports} Sites` : 'Add Downtime Record'}
+            </h2>
             <button 
               onClick={handleClose} 
               disabled={loading}
@@ -180,19 +239,63 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
             </button>
           </div>
 
-          {siteCode && (
+          {isMultiMode && (
             <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm font-medium text-blue-800">Selected Site</p>
-              <p className="text-2xl font-bold text-blue-900 mt-1">{siteCode}</p>
-              {rowNumber && (
-                <p className="text-xs text-blue-600 mt-1">Row {rowNumber} in spreadsheet</p>
-              )}
+              <p className="text-sm font-medium text-blue-800 mb-2">Selected Sites ({totalReports})</p>
+              <div className="flex flex-wrap gap-2">
+                {sheets.map((s, idx) => {
+                  const siteCode = getSiteCode(s);
+                  return (
+                    <span key={idx} className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                      {siteCode}
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                The same report data will be saved for all selected sites
+              </p>
             </div>
           )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {processingLog.length > 0 && (
+            <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+              <p className="text-sm font-medium text-gray-800 mb-2">Processing Status:</p>
+              <div className="space-y-1">
+                {processingLog.map((log, idx) => (
+                  <div key={idx} className="flex items-center space-x-2 text-xs">
+                    {log.status === 'processing' && (
+                      <svg className="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    {log.status === 'success' && (
+                      <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {log.status === 'error' && (
+                      <svg className="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                    <span className={`flex-1 ${
+                      log.status === 'success' ? 'text-green-700' :
+                      log.status === 'error' ? 'text-red-700' :
+                      'text-gray-700'
+                    }`}>
+                      {log.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -229,7 +332,7 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
                 </div>
               )}
               <p className="mt-1 text-xs text-gray-500">
-                Data will be written to columns A, F, G, and H in this sheet
+                Data will be written to columns A, F, G, R, and S in this sheet
               </p>
             </div>
 
@@ -248,7 +351,7 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                End of Downtime (Column G) <span className="text-red-500">*</span>
+                End of Downtime (Column G) <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <input
                 type="datetime-local"
@@ -261,7 +364,7 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cause of Downtime (Column H) <span className="text-red-500">*</span>
+                Cause of Downtime (Column R) <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.cause}
@@ -273,6 +376,24 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
                 {downtimeCauses.map((cause) => (
                   <option key={cause} value={cause}>
                     {cause}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Action Taken (Column S) <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.actionTaken}
+                onChange={(e) => setFormData({...formData, actionTaken: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+              >
+                {actionTakenOptions.map((action) => (
+                  <option key={action} value={action}>
+                    {action}
                   </option>
                 ))}
               </select>
@@ -300,17 +421,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
               </div>
             )}
 
-            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-xs text-green-800 font-medium mb-1">📝 Write Location:</p>
-              <p className="text-xs text-green-700">
-                • Site Code <strong>{siteCode}</strong> will be written to Column A<br/>
-                • Start Time will be written to Column F<br/>
-                • End Time will be written to Column G<br/>
-                • Cause will be written to Column H<br/>
-                • Data will stack in next available row if row already has data
-              </p>
-            </div>
-
             <div className="flex justify-end space-x-3 pt-4 border-t">
               <button
                 type="button"
@@ -324,7 +434,7 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {loading ? (
                   <>
@@ -332,8 +442,10 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Submitting...
+                    Processing {processingLog.filter(l => l.status === 'success').length}/{totalReports}...
                   </>
+                ) : isMultiMode ? (
+                  `Save ${totalReports} Reports`
                 ) : (
                   'Add Downtime'
                 )}

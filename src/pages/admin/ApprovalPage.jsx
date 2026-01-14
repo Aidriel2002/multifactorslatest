@@ -97,7 +97,7 @@ const ApprovalPage = () => {
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
 
-      <div className="flex-1 ml-64 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {/* Header */}
         <div className="bg-white shadow px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">User Approval</h1>

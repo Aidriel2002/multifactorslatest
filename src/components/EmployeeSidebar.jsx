@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 
 const employeeMenuItems = [
   { label: 'Dashboard', path: '/employee', icon: '📊' },
+  { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
   { label: 'Billings', path: '/billings', icon: '💰' },
   { label: 'My Tasks', path: '/employee/tasks', icon: '📝' },
   { label: 'Calendar', path: '/employee/calendar', icon: '📅' },
@@ -27,10 +28,10 @@ const EmployeeSidebar = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white w-64 fixed left-0 top-0">
+    <div className="flex flex-col h-screen bg-green-900 text-white w-64 fixed left-0 top-0">
       {/* Logo/Header */}
-      <div className="p-4 border-b border-gray-700">
-        <h1 className="text-xl font-bold">👤 Employee Portal</h1>
+      <div className="p-4 border-b border-green-700">
+        <h1 className="text-xl font-bold">Multifactors Sales</h1>
       </div>
 
       {/* Navigation Menu */}
@@ -41,8 +42,8 @@ const EmployeeSidebar = () => {
             to={item.path}
             className={`flex items-center px-4 py-3 mx-2 rounded-lg transition-colors ${
               isActive(item.path)
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                ? 'bg-green-600 text-white'
+                : 'text-gray-300 hover:bg-green-800 hover:text-white'
             }`}
           >
             <span className="text-xl mr-3">{item.icon}</span>
@@ -52,21 +53,21 @@ const EmployeeSidebar = () => {
       </nav>
 
       {/* User Profile Section */}
-      <div className="border-t border-gray-700 p-4">
+      <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-green-800 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold mr-3">
+            <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold mr-3">
               {profile?.full_name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-medium text-white">{profile?.full_name}</p>
-              <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
+              <p className="text-xs text-green-400 capitalize">{profile?.role}</p>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${
+              className={`w-5 h-5 text-green-400 transition-transform ${
                 showUserMenu ? 'rotate-180' : ''
               }`}
               fill="none"
@@ -84,14 +85,14 @@ const EmployeeSidebar = () => {
 
           {/* Dropdown Menu */}
           {showUserMenu && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-800 rounded-lg shadow-lg overflow-hidden">
               <Link
-                to="/employee/settings"
+                to="/settings"
                 onClick={() => setShowUserMenu(false)}
-                className="flex items-center px-4 py-3 hover:bg-gray-700 transition-colors"
+                className="flex items-center px-4 py-3 hover:bg-green-700 transition-colors"
               >
                 <svg
-                  className="w-5 h-5 mr-3 text-gray-400"
+                  className="w-5 h-5 mr-3 text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -113,7 +114,7 @@ const EmployeeSidebar = () => {
               </Link>
               <button
                 onClick={handleSignOut}
-                className="flex items-center w-full px-4 py-3 hover:bg-gray-700 transition-colors text-left text-red-400 hover:text-red-300"
+                className="flex items-center w-full px-4 py-3 hover:bg-green-700 transition-colors text-left text-red-400 hover:text-red-300"
               >
                 <svg
                   className="w-5 h-5 mr-3"

@@ -6,8 +6,8 @@ const adminMenuItems = [
   { label: 'Dashboard', path: '/admin', icon: '📊' },
   { label: 'User Approval', path: '/admin/approval', icon: '✅' },
   { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
+  { label: 'Contacts', path: '/admin/analytics', icon: '📉' },
   { label: 'Billings', path: '/billings', icon: '💰' },
-  { label: 'Analytics', path: '/admin/analytics', icon: '📉' },
   { label: 'System Settings', path: '/admin/system', icon: '⚙️' },
 ]
 
@@ -48,7 +48,7 @@ const AdminSidebar = () => {
       </nav>
 
       {/* User Profile */}
-      <div className="border-t border-gray-700 p-4">
+      <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
@@ -59,10 +59,10 @@ const AdminSidebar = () => {
             </div>
             <div className="flex-1 text-left">
               <p className="text-sm font-medium text-white">{profile?.full_name}</p>
-              <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
+              <p className="text-xs text-green-400 capitalize">{profile?.role}</p>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${
+              className={`w-5 h-5 text-green-400 transition-transform ${
                 showUserMenu ? 'rotate-180' : ''
               }`}
               fill="none"

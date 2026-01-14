@@ -101,14 +101,11 @@ const DowntimeList = () => {
           sheetName: selectedSheet
         });
 
-        // Filter records that have downtime data (columns F and G)
         const downtimeData = records.filter(record => {
           const values = Object.values(record);
-          // Check if there's data in what would be columns F and G (index 5 and 6)
           return values.length >= 7 && (values[5] || values[6]);
         });
 
-        console.log('[DowntimeList] ✅ Loaded downtime records:', downtimeData.length);
         setDowntimeRecords(downtimeData);
       } catch (err) {
         console.error('[DowntimeList] ❌ Load failed:', err.message);
@@ -122,7 +119,6 @@ const DowntimeList = () => {
     fetchDowntimeRecords();
   }, [selectedSheet, selectedPhase, phases]);
 
-  // Calculate downtime duration
   const calculateDuration = (start, end) => {
     if (!start || !end) return 'N/A';
     
@@ -137,7 +133,7 @@ const DowntimeList = () => {
       const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
       
       return `${hours}h ${minutes}m`;
-    } catch (error) {
+    } catch {
       return 'Invalid';
     }
   };
@@ -164,7 +160,7 @@ const DowntimeList = () => {
             <div className="mb-6">
             <a
               href="/dictreport"
-              className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-base font-medium rounded-lg hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all"
+              className="inline-flex items-center px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 shadow-md hover:shadow-lg transition-all"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -221,45 +217,6 @@ const DowntimeList = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-6">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 text-3xl">⏱️</div>
-                  <div className="ml-5 w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-500">Total Downtime Records</div>
-                    <div className="text-2xl font-bold text-gray-900">{downtimeRecords.length}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 text-3xl">📊</div>
-                  <div className="ml-5 w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-500">Selected Phase</div>
-                    <div className="text-2xl font-bold text-gray-900 truncate">{selectedPhase || 'None'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 text-3xl">📄</div>
-                  <div className="ml-5 w-0 flex-1">
-                    <div className="text-sm font-medium text-gray-500">Selected Sheet</div>
-                    <div className="text-2xl font-bold text-gray-900 truncate">{selectedSheet || 'None'}</div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
