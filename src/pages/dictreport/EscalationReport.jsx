@@ -1,17 +1,17 @@
+// src/pages/dictreport/EscalationReport.jsx
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import AdminSidebar from "../../components/AdminSidebar";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
-import UpdateUptimeModal from "./components/UpdateUptimeModal";
 
-const NoUptime = () => {
+const EscalationReport = () => {
   const { profile } = useAuth();
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState("");
   const [availableSheets, setAvailableSheets] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
-  const [noUptimeRecords, setNoUptimeRecords] = useState([]);
+  const [escalationRecords, setEscalationRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,7 +19,8 @@ const NoUptime = () => {
   const [itemsPerPage] = useState(10);
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [isBulkUpdate, setIsBulkUpdate] = useState(false);
+  const [causeOfDowntime, setCauseOfDowntime] = useState("");
+  const [actionPlan, setActionPlan] = useState("");
   const [googleAuthToken, setGoogleAuthToken] = useState(() => {
     const stored = sessionStorage.getItem('google_sheets_token');
     if (stored) {
@@ -37,23 +38,35 @@ const NoUptime = () => {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
+  // Cause of Downtime options
+  const causeOptions = [
+    "Power Outage",
+    "Human Intervention",
+    "Municipal Renovation",
+    "Brgy Renovation",
+    "Maintenance",
+    "Natural Disaster",
+    "Other"
+  ];
+
+  // Action Plan options
+  const actionPlanOptions = [
+    "None",
+    "Technical Visit",
+    "Remote Troubleshooting",
+    "System Restart",
+    "Configuration Update",
+    "Hardware Replacement",
+    "Software Patch",
+    "Schedule Maintenance"
+  ];
+
   const extractSpreadsheetId = (urlOrId) => {
     if (!urlOrId.includes('/')) {
       return urlOrId;
     }
     const match = urlOrId.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : urlOrId;
-  };
-
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
   const requestGoogleAuth = () => {
@@ -83,6 +96,20 @@ const NoUptime = () => {
       client.requestAccessToken();
     });
   };
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchPhases = async () => {
@@ -137,7 +164,7 @@ const NoUptime = () => {
   useEffect(() => {
     if (!selectedSheet || !selectedPhase) return;
 
-    const fetchNoUptimeRecords = async () => {
+    const fetchEscalationRecords = async () => {
       setLoading(true);
       setError("");
 
@@ -148,36 +175,47 @@ const NoUptime = () => {
       }
 
       const spreadsheetId = extractSpreadsheetId(phase.sheets_link);
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${selectedSheet}?key=${GOOGLE_API_KEY}`;
+      // Fetch all data starting from row 1
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${selectedSheet}!A1:Z1000?key=${GOOGLE_API_KEY}`;
 
       try {
         const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to fetch data');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to fetch data');
+        }
         
         const data = await response.json();
         const rows = data.values || [];
         
-        if (rows.length < 2) {
-          setNoUptimeRecords([]);
+        if (rows.length < 5) {
+          setEscalationRecords([]);
           setLoading(false);
           return;
         }
 
-        const headers = rows[0];
+        // Headers are in row 4 (index 3)
+        const headerRowIndex = 3;
+        const headers = rows[headerRowIndex];
+        
+        // Check if we actually have headers
+        if (!headers || headers.length === 0) {
+          throw new Error('No headers found in row 4');
+        }
 
-        const startTimeColumn = headers.find(h => 
-          h && (h.includes('DOWNTIME START') || h.includes('START'))
-        );
-        const endTimeColumn = headers.find(h => 
-          h && (h.includes('DOWNTIME END') || h.includes('END'))
-        );
+        // Column D = index 3, Column E = index 4
+        const causeColumnIndex = 3;
+        const actionPlanColumnIndex = 4;
 
-        const endTimeIndex = headers.indexOf(endTimeColumn);
-
-        const records = rows.slice(1).map((row, index) => {
+        // Data starts from row 5 (index 4), since row 4 is headers
+        const dataRows = rows.slice(headerRowIndex + 1);
+        
+        const records = dataRows.map((row, index) => {
+          const actualRowNumber = headerRowIndex + 2 + index; // +2 because: +1 for 1-based indexing, +1 to skip header row
           const record = { 
-            _rowNumber: index + 2,
-            _endTimeColumnIndex: endTimeIndex,
+            _rowNumber: actualRowNumber,
+            _causeColumnIndex: causeColumnIndex,
+            _actionPlanColumnIndex: actionPlanColumnIndex,
             _sheetName: selectedSheet,
             _spreadsheetId: spreadsheetId,
             _index: index
@@ -188,38 +226,39 @@ const NoUptime = () => {
           return record;
         });
 
-        const noUptimeData = records.filter(record => {
-          const startTime = record[startTimeColumn];
-          const endTime = record[endTimeColumn];
+        // Filter for records missing cause or action plan
+        const escalationData = records.filter(record => {
+          const cause = record[headers[causeColumnIndex]];
+          const action = record[headers[actionPlanColumnIndex]];
           
-          const hasStartTime = startTime && startTime.trim() !== '';
-          const hasNoEndTime = !endTime || endTime.trim() === '';
+          const hasMissingCause = !cause || cause.trim() === '';
+          const hasMissingAction = !action || action.trim() === '';
           
-          return hasStartTime && hasNoEndTime;
+          return hasMissingCause || hasMissingAction;
         });
 
-        setNoUptimeRecords(noUptimeData);
+        setEscalationRecords(escalationData);
       } catch (err) {
         console.error('Error fetching records:', err);
-        setError('Failed to fetch no uptime records: ' + err.message);
-        setNoUptimeRecords([]);
+        setError('Failed to fetch escalation records: ' + err.message);
+        setEscalationRecords([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchNoUptimeRecords();
+    fetchEscalationRecords();
   }, [selectedSheet, selectedPhase, phases, GOOGLE_API_KEY]);
 
   const filteredRecords = useMemo(() => {
-    if (!searchTerm) return noUptimeRecords;
+    if (!searchTerm) return escalationRecords;
     
-    return noUptimeRecords.filter(record => {
+    return escalationRecords.filter(record => {
       return Object.values(record).some(value => 
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
-  }, [noUptimeRecords, searchTerm]);
+  }, [escalationRecords, searchTerm]);
 
   const paginatedRecords = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -233,7 +272,6 @@ const NoUptime = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedSheet]);
 
-  // Handle row selection
   const handleRowSelection = (record) => {
     setSelectedRecords(prev => {
       const isSelected = prev.some(r => r._index === record._index);
@@ -245,7 +283,6 @@ const NoUptime = () => {
     });
   };
 
-  // Handle select all
   const handleSelectAll = () => {
     if (selectedRecords.length === paginatedRecords.length && paginatedRecords.length > 0) {
       setSelectedRecords([]);
@@ -254,17 +291,22 @@ const NoUptime = () => {
     }
   };
 
-  // Handle bulk update
   const handleBulkUpdate = () => {
     if (selectedRecords.length === 0) {
       alert('Please select at least one record');
       return;
     }
-    setIsBulkUpdate(true);
+    setCauseOfDowntime("");
+    setActionPlan("");
     setIsUpdateModalOpen(true);
   };
 
-  const handleSubmitUpdate = async ({ uptime }) => {
+  const handleSubmitUpdate = async () => {
+    if (!causeOfDowntime && !actionPlan) {
+      alert('Please select at least Cause of Downtime or Action Plan');
+      return;
+    }
+
     const phase = phases.find((p) => p.name === selectedPhase);
     if (!phase) return;
 
@@ -277,15 +319,25 @@ const NoUptime = () => {
         token = await requestGoogleAuth();
       }
 
-      const formattedEnd = formatDateTime(uptime);
-      
       // Prepare batch update for all selected records
-      const updates = selectedRecords.map(record => {
-        const columnLetter = String.fromCharCode(65 + record._endTimeColumnIndex);
-        return {
-          range: `${selectedSheet}!${columnLetter}${record._rowNumber}`,
-          values: [[formattedEnd]]
-        };
+      const updates = [];
+      
+      selectedRecords.forEach(record => {
+        if (causeOfDowntime) {
+          const causeColumnLetter = String.fromCharCode(65 + record._causeColumnIndex);
+          updates.push({
+            range: `${selectedSheet}!${causeColumnLetter}${record._rowNumber}`,
+            values: [[causeOfDowntime]]
+          });
+        }
+        
+        if (actionPlan) {
+          const actionColumnLetter = String.fromCharCode(65 + record._actionPlanColumnIndex);
+          updates.push({
+            range: `${selectedSheet}!${actionColumnLetter}${record._rowNumber}`,
+            values: [[actionPlan]]
+          });
+        }
       });
 
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`;
@@ -303,53 +355,20 @@ const NoUptime = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update end times');
+        throw new Error('Failed to update records');
       }
 
       setIsUpdateModalOpen(false);
       setSelectedRecords([]);
-      setIsBulkUpdate(false);
+      setCauseOfDowntime("");
+      setActionPlan("");
       
       alert(`✅ Successfully updated ${selectedRecords.length} record${selectedRecords.length > 1 ? 's' : ''}!`);
       
       window.location.reload();
     } catch (error) {
-      throw new Error(`Failed to update: ${error.message}`);
+      alert(`Failed to update: ${error.message}`);
     }
-  };
-
-  const handleCloseModal = () => {
-    setIsUpdateModalOpen(false);
-    setIsBulkUpdate(false);
-  };
-
-  // Create modal record for display
-  const getModalRecord = () => {
-    if (selectedRecords.length === 0) return null;
-
-    const headers = Object.keys(selectedRecords[0]).filter(k => !k.startsWith('_'));
-    const startTimeColumn = headers.find(h => 
-      h && (h.includes('DOWNTIME START') || h.includes('START'))
-    );
-
-    if (isBulkUpdate) {
-      return {
-        siteCode: `${selectedRecords.length} sites selected`,
-        downtime: selectedRecords[0][startTimeColumn] || '',
-        sheetName: selectedSheet,
-        rowNumber: `Multiple rows`,
-        _original: selectedRecords
-      };
-    }
-
-    const record = selectedRecords[0];
-    return {
-      siteCode: record['SITE CODE'] || 'N/A',
-      downtime: record[startTimeColumn] || '',
-      sheetName: selectedSheet,
-      rowNumber: record._rowNumber,
-      _original: [record]
-    };
   };
 
   return (
@@ -359,59 +378,27 @@ const NoUptime = () => {
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
         <div className="bg-white shadow">
           <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  No Uptime Records
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Update End of Downtime Report
-                </p>
-              </div>
-              <div className="flex items-center space-x-3">
-                {googleAuthToken ? (
-                  <div className="flex items-center px-3 py-1.5 bg-green-50 border border-green-200 rounded-md">
-                    <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-sm text-green-800 font-medium"> Sheets Connected</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={async () => {
-                      try {
-                        await requestGoogleAuth();
-                        alert('Successfully connected to Google Sheets!');
-                      } catch (error) {
-                        alert('Failed to connect: ' + error.message);
-                      }
-                    }}
-                    className="flex items-center px-3 py-1.5 bg-yellow-50 border border-yellow-300 rounded-md hover:bg-yellow-100"
-                  >
-                    <svg className="w-4 h-4 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-sm text-yellow-800 font-medium">Connect to Sheets</span>
-                  </button>
-                )}
-              </div>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Escalation Report
+            </h1>
+            <p className="text-sm text-gray-600">
+              Records with missing cause of downtime or action plan
+            </p>
           </div>
-          
         </div>
-        
 
         <div className="p-6">
           <div className="mb-6 flex items-center justify-between">
             <a
               href="/dictreport"
-              className="inline-flex items-center px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 shadow-md hover:shadow-lg transition-all"
+              className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-base font-medium rounded-lg hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Add Downtime Report
-            </a>
+              Back to Dashboard
+            </a>                   
+                                                                                       
 
             {selectedRecords.length > 0 && (
               <button
@@ -419,16 +406,14 @@ const NoUptime = () => {
                 className="inline-flex items-center px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 shadow-md hover:shadow-lg transition-all"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Update Selected ({selectedRecords.length})
               </button>
             )}
           </div>
           <div className="mb-4">
-            
                 <input
-                
                   type="text"
                   placeholder="Search records..."
                   value={searchTerm}
@@ -483,7 +468,7 @@ const NoUptime = () => {
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  No Uptime Records
+                  Escalation Records
                 </h2>
                 <span className="text-sm text-gray-600">
                   {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
@@ -502,7 +487,7 @@ const NoUptime = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="mt-2 text-gray-500">
-                  {searchTerm ? 'No records match your search' : 'No records with missing end times'}
+                  {searchTerm ? 'No records match your search' : 'No records with missing information'}
                 </p>
               </div>
             ) : (
@@ -607,17 +592,80 @@ const NoUptime = () => {
         </div>
       </div>
 
-      {/* Update Uptime Modal */}
-      {selectedRecords.length > 0 && (
-        <UpdateUptimeModal
-          isOpen={isUpdateModalOpen}
-          onClose={handleCloseModal}
-          onSubmit={handleSubmitUpdate}
-          record={getModalRecord()}
-        />
+      {/* Update Modal */}
+      {isUpdateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Update Escalation Details</h2>
+            
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm font-medium text-blue-800">Selected Records</p>
+              <p className="text-lg font-bold text-blue-900">
+                {selectedRecords.length} record{selectedRecords.length > 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cause of Downtime (Column D)
+                </label>
+                <select
+                  value={causeOfDowntime}
+                  onChange={(e) => setCauseOfDowntime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Cause --</option>
+                  {causeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Action Plan (Column E)
+                </label>
+                <select
+                  value={actionPlan}
+                  onChange={(e) => setActionPlan(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Select Action Plan --</option>
+                  {actionPlanOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setIsUpdateModalOpen(false);
+                    setCauseOfDowntime("");
+                    setActionPlan("");
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitUpdate}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Update Records
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
-export default NoUptime;
+export default EscalationReport;
