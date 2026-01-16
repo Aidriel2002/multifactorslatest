@@ -1,4 +1,3 @@
-// src/pages/dictreport/EscalationReport.jsx
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
@@ -163,9 +162,9 @@ const EscalationReport = () => {
         if (sheets.length > 0) {
           setSelectedSheet(sheets[0]);
         }
-      } catch (err) {
-        setError('Failed to load available sheets');
-      }
+      } catch {
+      setError('Failed to load available sheets');
+    }
     };
 
     fetchSheets();

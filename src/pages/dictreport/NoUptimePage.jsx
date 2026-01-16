@@ -126,7 +126,7 @@ const NoUptime = () => {
         if (sheets.length > 0) {
           setSelectedSheet(sheets[0]);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load available sheets');
       }
     };

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider } from './contexts/AuthProvider'
 import { ProtectedRoute, AdminRoute, PublicRoute, EmployeeRoute } from './components/ProtectedRoute'
 
 import Login from './pages/Login'
@@ -24,14 +24,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import ApprovalPage from './pages/admin/ApprovalPage'
 import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 
-// Portfolio/Landing Page Components
-import Header from './components/layouts/Header'
-import Navigation from './components/layouts/Navigation'
-import HeroSection from './components/sections/HeroSection'
-import AboutSection from './components/sections/AboutSection'
-import ProjectSection from './components/sections/ProjectSection'
-import ServicesSection from './components/sections/ServicesSection'
-import Footer from './components/layouts/Footer'
+
 
 // Landing Page Component
 const LandingPage = () => {
