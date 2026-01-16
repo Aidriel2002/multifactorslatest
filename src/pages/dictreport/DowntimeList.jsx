@@ -82,7 +82,6 @@ const DowntimeList = () => {
     fetchSheets();
   }, [selectedPhase, phases]);
 
-  // Fetch downtime records when sheet changes
   useEffect(() => {
     if (!selectedSheet || !selectedPhase) return;
 
