@@ -26,18 +26,18 @@ const BillingsSidebar = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-purple-900 to-purple-800 text-white w-64 fixed left-0 top-0">
+    <div className="flex flex-col h-screen bg-green text-white w-64 fixed left-0 top-0">
       {/* Logo/Header */}
-      <div className="p-4 border-b border-purple-700">
+      <div className="p-4 border-b border-green-700">
         <h1 className="text-xl font-bold">💰 Billing System</h1>
-        <p className="text-xs text-purple-200 mt-1">Payment Management</p>
+        <p className="text-xs text-green-200 mt-1">Payment Management</p>
       </div>
 
       {/* Back to Main Link */}
-      <div className="px-4 py-3 border-b border-purple-700">
+      <div className="px-4 py-3 border-b border-green-700">
         <Link
           to="/admin"
-          className="flex items-center px-3 py-2 rounded-lg bg-purple-700 hover:bg-purple-600 transition-colors"
+          className="flex items-center px-3 py-2 rounded-lg bg-green-700 hover:bg-green-600 transition-colors"
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -54,8 +54,8 @@ const BillingsSidebar = () => {
             to={item.path}
             className={`flex items-center px-4 py-3 mx-2 rounded-lg transition-colors ${
               isActive(item.path)
-                ? 'bg-purple-600 text-white'
-                : 'text-purple-100 hover:bg-purple-700 hover:text-white'
+                ? 'bg-green-600 text-white'
+                : 'text-purple-100 hover:bg-green-700 hover:text-white'
             }`}
           >
             <span className="text-xl mr-3">{item.icon}</span>
@@ -65,13 +65,13 @@ const BillingsSidebar = () => {
       </nav>
 
       {/* User Profile Section */}
-      <div className="border-t border-purple-700 p-4">
+      <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold mr-3">
+            <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold mr-3">
               {profile?.full_name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 text-left">
@@ -97,14 +97,14 @@ const BillingsSidebar = () => {
 
           {/* Dropdown Menu */}
           {showUserMenu && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-purple-700 rounded-lg shadow-lg overflow-hidden">
+            <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-700 rounded-lg shadow-lg overflow-hidden">
               <Link
                 to="/settings"
                 onClick={() => setShowUserMenu(false)}
-                className="flex items-center px-4 py-3 hover:bg-purple-600 transition-colors"
+                className="flex items-center px-4 py-3 hover:bg-green-600 transition-colors"
               >
                 <svg
-                  className="w-5 h-5 mr-3 text-purple-200"
+                  className="w-5 h-5 mr-3 text-green-200"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -126,7 +126,7 @@ const BillingsSidebar = () => {
               </Link>
               <button
                 onClick={handleSignOut}
-                className="flex items-center w-full px-4 py-3 hover:bg-purple-600 transition-colors text-left text-red-300 hover:text-red-200"
+                className="flex items-center w-full px-4 py-3 hover:bg-green-600 transition-colors text-left text-red-300 hover:text-red-200"
               >
                 <svg
                   className="w-5 h-5 mr-3"

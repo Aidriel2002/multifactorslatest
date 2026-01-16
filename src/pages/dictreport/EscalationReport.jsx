@@ -9,6 +9,7 @@ const EscalationReport = () => {
   const { profile } = useAuth();
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState("");
+  const [selectedProject, setSelectedProject] = useState(""); // New state for project filter
   const [availableSheets, setAvailableSheets] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [escalationRecords, setEscalationRecords] = useState([]);
@@ -37,6 +38,15 @@ const EscalationReport = () => {
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+  // Project options
+  const projectOptions = [
+    "PICS MUN",
+    "PICS-PP PH2 Bukidnon",
+    "PICS-PP R10 PH2",
+    "PICS-PP R10 P3",
+    "PICS MUN EXPANSION"
+  ];
 
   // Cause of Downtime options
   const causeOptions = [
@@ -251,14 +261,29 @@ const EscalationReport = () => {
   }, [selectedSheet, selectedPhase, phases, GOOGLE_API_KEY]);
 
   const filteredRecords = useMemo(() => {
-    if (!searchTerm) return escalationRecords;
+    let filtered = escalationRecords;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(record => {
+        return Object.values(record).some(value => 
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    }
+
+    // Filter by project
+    if (selectedProject) {
+      filtered = filtered.filter(record => {
+        // Assuming the Project column exists in the records
+        // Adjust the column name if it's different in your sheet
+        const projectValue = record['Project'] || record['PROJECT'] || '';
+        return projectValue === selectedProject;
+      });
+    }
     
-    return escalationRecords.filter(record => {
-      return Object.values(record).some(value => 
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    });
-  }, [escalationRecords, searchTerm]);
+    return filtered;
+  }, [escalationRecords, searchTerm, selectedProject]);
 
   const paginatedRecords = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -270,7 +295,7 @@ const EscalationReport = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSheet]);
+  }, [searchTerm, selectedSheet, selectedProject]);
 
   const handleRowSelection = (record) => {
     setSelectedRecords(prev => {
@@ -391,13 +416,13 @@ const EscalationReport = () => {
           <div className="mb-6 flex items-center justify-between">
             <a
               href="/dictreport"
-              className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white text-base font-medium rounded-lg hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all"
+              className="inline-flex items-center px-6 py-3 bg-green-600 text-white text-base font-medium rounded-lg hover:bg-green-700 shadow-md hover:shadow-lg transition-all"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Back to Dashboard
-            </a>                   
+              Add Downtime Report
+            </a>               
                                                                                        
 
             {selectedRecords.length > 0 && (
@@ -429,7 +454,7 @@ const EscalationReport = () => {
           )}
 
           <div className="bg-white shadow rounded-lg p-6 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phase</label>
                 <select
@@ -460,7 +485,21 @@ const EscalationReport = () => {
                 </select>
               </div>
 
-              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Project</label>
+                <select
+                  value={selectedProject}
+                  onChange={(e) => setSelectedProject(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Projects</option>
+                  {projectOptions.map((project) => (
+                    <option key={project} value={project}>
+                      {project}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -487,7 +526,7 @@ const EscalationReport = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="mt-2 text-gray-500">
-                  {searchTerm ? 'No records match your search' : 'No records with missing information'}
+                  {searchTerm || selectedProject ? 'No records match your filters' : 'No records with missing information'}
                 </p>
               </div>
             ) : (
