@@ -14,7 +14,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
   const [loadingSheets, setLoadingSheets] = useState(false);
   const [processingLog, setProcessingLog] = useState([]);
 
-  // Check if we're in multi-report mode
   const isMultiMode = Array.isArray(sheet);
   const sheets = isMultiMode ? sheet : (sheet ? [sheet] : []);
   const totalReports = sheets.length;
@@ -116,7 +115,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     }
 
     try {
-      // Prepare common data for all sites
       const commonData = {
         startTime: formatForSheets(formData.startTime),
         endTime: formData.endTime ? formatForSheets(formData.endTime) : '',
@@ -128,7 +126,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
       let successCount = 0;
       let failCount = 0;
 
-      // Process each site sequentially
       for (let i = 0; i < sheets.length; i++) {
         const currentSheet = sheets[i];
         const siteCode = getSiteCode(currentSheet);
@@ -162,7 +159,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
             
             successCount++;
             
-            // Small delay between writes to avoid rate limiting
             if (i < sheets.length - 1) {
               await new Promise(resolve => setTimeout(resolve, 300));
             }
@@ -182,7 +178,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
         }
       }
 
-      // Show final summary
       const summary = `Batch Report Complete!\n✅ Success: ${successCount}\n${failCount > 0 ? `❌ Failed: ${failCount}` : ''}`;
       
       if (failCount === 0) {

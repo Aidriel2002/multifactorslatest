@@ -34,11 +34,9 @@ const AccountSettings = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Render appropriate sidebar based on role */}
       {isAdmin ? <AdminSidebar /> : <EmployeeSidebar />}
       
       <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
@@ -46,10 +44,8 @@ const AccountSettings = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-6">
           <div className="max-w-3xl">
-            {/* Profile Information */}
             <div className="bg-white shadow rounded-lg mb-6">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Profile Information</h2>
@@ -132,7 +128,6 @@ const AccountSettings = () => {
               </div>
             </div>
 
-            {/* Account Details */}
             <div className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Account Details</h2>

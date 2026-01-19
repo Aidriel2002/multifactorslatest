@@ -38,7 +38,6 @@ const EscalationReport = () => {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
-  // Project options
   const projectOptions = [
     "PICS MUN",
     "PICS-PP PH2 Bukidnon",
@@ -47,7 +46,6 @@ const EscalationReport = () => {
     "PICS MUN EXPANSION"
   ];
 
-  // Cause of Downtime options
   const causeOptions = [
     "Power Outage",
     "Human Intervention",
@@ -58,7 +56,6 @@ const EscalationReport = () => {
     "Other"
   ];
 
-  // Action Plan options
   const actionPlanOptions = [
     "None",
     "Technical Visit",
@@ -184,7 +181,6 @@ const EscalationReport = () => {
       }
 
       const spreadsheetId = extractSpreadsheetId(phase.sheets_link);
-      // Fetch all data starting from row 1
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${selectedSheet}!A1:Z1000?key=${GOOGLE_API_KEY}`;
 
       try {
@@ -203,24 +199,20 @@ const EscalationReport = () => {
           return;
         }
 
-        // Headers are in row 4 (index 3)
         const headerRowIndex = 3;
         const headers = rows[headerRowIndex];
         
-        // Check if we actually have headers
         if (!headers || headers.length === 0) {
           throw new Error('No headers found in row 4');
         }
 
-        // Column D = index 3, Column E = index 4
         const causeColumnIndex = 3;
         const actionPlanColumnIndex = 4;
 
-        // Data starts from row 5 (index 4), since row 4 is headers
         const dataRows = rows.slice(headerRowIndex + 1);
         
         const records = dataRows.map((row, index) => {
-          const actualRowNumber = headerRowIndex + 2 + index; // +2 because: +1 for 1-based indexing, +1 to skip header row
+          const actualRowNumber = headerRowIndex + 2 + index; 
           const record = { 
             _rowNumber: actualRowNumber,
             _causeColumnIndex: causeColumnIndex,
@@ -235,7 +227,6 @@ const EscalationReport = () => {
           return record;
         });
 
-        // Filter for records missing cause or action plan
         const escalationData = records.filter(record => {
           const cause = record[headers[causeColumnIndex]];
           const action = record[headers[actionPlanColumnIndex]];
@@ -271,11 +262,8 @@ const EscalationReport = () => {
       });
     }
 
-    // Filter by project
     if (selectedProject) {
       filtered = filtered.filter(record => {
-        // Assuming the Project column exists in the records
-        // Adjust the column name if it's different in your sheet
         const projectValue = record['Project'] || record['PROJECT'] || '';
         return projectValue === selectedProject;
       });
@@ -343,7 +331,6 @@ const EscalationReport = () => {
         token = await requestGoogleAuth();
       }
 
-      // Prepare batch update for all selected records
       const updates = [];
       
       selectedRecords.forEach(record => {
@@ -630,7 +617,6 @@ const EscalationReport = () => {
         </div>
       </div>
 
-      {/* Update Modal */}
       {isUpdateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">

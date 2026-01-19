@@ -117,7 +117,6 @@ const ReportDashboard = () => {
     actionTaken 
   });
   
-  // First, check existing data to find the next empty row
   const checkUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A:S`;
   
   const checkResponse = await fetch(checkUrl, {
@@ -137,7 +136,6 @@ const ReportDashboard = () => {
   
   console.log('[WriteToSheet] Total rows in sheet:', allRows.length);
   
-  // Find the last row with any data
   let lastRowWithData = 0;
   for (let i = 0; i < allRows.length; i++) {
     const row = allRows[i];
@@ -146,13 +144,11 @@ const ReportDashboard = () => {
     }
   }
   
-  // Target row is the next row after the last row with data
   const targetRow = lastRowWithData + 1;
   
   console.log('[WriteToSheet] Last row with data:', lastRowWithData);
   console.log('[WriteToSheet] Writing to row:', targetRow);
   
-  // Prepare the batch update request
   const requests = [
     {
       range: `${sheetName}!A${targetRow}`,
@@ -323,7 +319,6 @@ const ReportDashboard = () => {
 
     console.log('[Dashboard] ✅ Successfully written to row:', result.targetRow);
     
-    // Don't close modal or show alert here - let the modal handle it
     return result;
   } catch (error) {
     console.error('[Dashboard] ❌ Write failed:', error);
@@ -387,7 +382,6 @@ const ReportDashboard = () => {
   }, [effectiveSelectedPhase, phases]);
 
 
-  // Add this function to handle row selection
 const handleRowSelection = (sheet, index) => {
   setSelectedRows(prev => {
     const isSelected = prev.some(row => row._index === index);
@@ -399,7 +393,6 @@ const handleRowSelection = (sheet, index) => {
   });
 };
 
-// Add this function to handle select all
 const handleSelectAll = () => {
   if (selectedRows.length === paginatedSheets.length) {
     setSelectedRows([]);
@@ -408,14 +401,11 @@ const handleSelectAll = () => {
   }
 };
 
-// Add this function to handle bulk report creation
 const handleCreateBulkReports = () => {
   if (selectedRows.length === 0) {
     alert('Please select at least one record');
     return;
   }
-  // You can modify this to open a modal for bulk report creation
-  // For now, we'll just process them one by one
   setIsDowntimeModalOpen(true);
   setSelectedSheet(selectedRows);
 };
@@ -425,7 +415,6 @@ const handleCreateBulkReports = () => {
       <Sidebar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
@@ -470,7 +459,6 @@ const handleCreateBulkReports = () => {
 
         <div className="p-6">
 
-          {/* Error Alert */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
               <div className="flex">
@@ -484,7 +472,6 @@ const handleCreateBulkReports = () => {
             </div>
           )}
 
-          {/* Quick Actions */}
         <div className="mb-6">
 
           <div className="flex flex-row items-center justify-between">
@@ -554,7 +541,6 @@ const handleCreateBulkReports = () => {
             </div>
           </div>
       </div>
-          {/* Phase Selector */}
           <div className="bg-white shadow rounded-lg p-6 mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -617,7 +603,6 @@ const handleCreateBulkReports = () => {
             </div>
           </div>
 
-          {/* Sheets Table */}
   <div className="bg-white shadow rounded-lg overflow-hidden">
   <div className="px-6 py-4 border-b border-gray-200">
     <div className="flex items-center justify-between">
@@ -748,7 +733,6 @@ const handleCreateBulkReports = () => {
         </table>
       </div>
       
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
           <div className="flex-1 flex justify-between sm:hidden">
@@ -818,14 +802,12 @@ const handleCreateBulkReports = () => {
         </div>
       </div>
 
-      {/* Add Phase Modal */}
       <AddPhaseModal
         isOpen={isPhaseModalOpen}
         onClose={() => setIsPhaseModalOpen(false)}
         onSubmit={handleAddPhase}
       />
 
-      {/* Add Downtime Modal */}
       <AddDowntimeModal
         isOpen={isDowntimeModalOpen}
         onClose={() => {

@@ -17,13 +17,11 @@ const BillingDashboard = () => {
     const fetchData = async () => {
       setLoading(true)
       
-      // Fetch providers
       const { data: providersData, error: providersError } = await supabase
         .from('providers')
         .select('*')
         .order('due_day', { ascending: true })
 
-      // Fetch recent payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payment_history')
         .select(`
@@ -122,9 +120,7 @@ const BillingDashboard = () => {
           ) : (
             <>
             
-              {/* Stats Grid */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-6">
-                {/* Quick Actions */}
               <div className="mt-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div className="text-white">
@@ -149,7 +145,6 @@ const BillingDashboard = () => {
                   </div>
                 </div>
               </div>
-                {/* Total Revenue */}
                 <div className="bg-white overflow-hidden shadow-lg rounded-lg border-l-4 border-green-500">
                   <div className="p-5">
                     <div className="flex items-center">

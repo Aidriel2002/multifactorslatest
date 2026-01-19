@@ -88,8 +88,7 @@ const ActivityLogs = () => {
   }
 
   const formatTimestamp = (timestamp) => {
-  // Convert the UTC timestamp string to a Date object
-  const date = new Date(timestamp + 'Z') // 'Z' forces it to be UTC
+  const date = new Date(timestamp + 'Z') 
 
   return date.toLocaleString('en-PH', {
     timeZone: 'Asia/Manila',
@@ -114,7 +113,6 @@ const ActivityLogs = () => {
         />
 
         <div className="p-6">
-          {/* Filter Tabs */}
           <div className="mb-6 bg-white rounded-lg shadow p-4">
             <div className="flex space-x-2">
               {['all', 'payment', 'create', 'update', 'delete', 'error'].map((type) => (
@@ -133,7 +131,6 @@ const ActivityLogs = () => {
             </div>
           </div>
 
-          {/* Logs List */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             {loading ? (
               <div className="text-center py-12">

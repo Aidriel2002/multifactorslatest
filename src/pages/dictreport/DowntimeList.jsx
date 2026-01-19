@@ -19,7 +19,6 @@ const DowntimeList = () => {
   const Sidebar = profile?.role === "admin" ? AdminSidebar : EmployeeSidebar;
   const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
-  // Helper function to extract spreadsheet ID from URL
   const extractSpreadsheetId = (urlOrId) => {
     if (!urlOrId.includes('/')) {
       return urlOrId;
@@ -28,7 +27,6 @@ const DowntimeList = () => {
     return match ? match[1] : urlOrId;
   };
 
-  // Fetch phases from database
   useEffect(() => {
     const fetchPhases = async () => {
       const { data, error } = await supabase
@@ -51,7 +49,6 @@ const DowntimeList = () => {
     fetchPhases();
   }, []);
 
-  // Fetch available sheets when phase changes
   useEffect(() => {
     if (!selectedPhase) return;
 
@@ -142,7 +139,6 @@ const DowntimeList = () => {
       <Sidebar />
 
       <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <h1 className="text-2xl font-bold text-gray-900">
@@ -167,7 +163,6 @@ const DowntimeList = () => {
               Add Downtime Report
             </a>
           </div>
-          {/* Error Alert */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
               <div className="flex">
@@ -181,7 +176,6 @@ const DowntimeList = () => {
             </div>
           )}
 
-          {/* Filters */}
           <div className="bg-white shadow rounded-lg p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -220,7 +214,6 @@ const DowntimeList = () => {
             </div>
           </div>
 
-          {/* Downtime Records Table */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -265,8 +258,8 @@ const DowntimeList = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {downtimeRecords.map((record, index) => {
                       const values = Object.entries(record).filter(([key]) => key !== '_rowNumber');
-                      const startTime = values[5]?.[1]; // Column F
-                      const endTime = values[6]?.[1];   // Column G
+                      const startTime = values[5]?.[1]; 
+                      const endTime = values[6]?.[1];   
                       
                       return (
                         <tr key={index} className="hover:bg-gray-50">

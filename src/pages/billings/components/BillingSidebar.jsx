@@ -27,13 +27,11 @@ const BillingsSidebar = () => {
   return (
     <aside className="billings-sidebar fixed left-0 top-0 z-50">
       <div className="flex flex-col h-screen w-64 bg-gradient-to-b from-green-900 to-green-600 text-white">
-        {/* Logo/Header */}
         <div className="p-4 border-b border-green-700">
           <h1 className="text-xl font-bold">💰 Billing System</h1>
           <p className="text-xs text-green-200 mt-1">Payment Management</p>
         </div>
 
-        {/* Back to Main Link */}
         <div className="px-4 py-3 border-b border-green-700">
           <Link
             to="/admin"
@@ -56,7 +54,6 @@ const BillingsSidebar = () => {
           </Link>
         </div>
 
-        {/* Navigation Menu */}
         <nav className="flex-1 overflow-y-auto py-4">
           {billingsMenuItems.map((item, index) => (
             <Link
@@ -74,7 +71,6 @@ const BillingsSidebar = () => {
           ))}
         </nav>
 
-        {/* User Profile Section */}
         <div className="border-t border-green-700 p-4">
           <div className="relative">
             <button
@@ -107,7 +103,6 @@ const BillingsSidebar = () => {
               </svg>
             </button>
 
-            {/* Dropdown Menu */}
             {showUserMenu && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-700 rounded-lg shadow-lg overflow-hidden">
                 <Link

@@ -69,12 +69,10 @@ const BillingNotification = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // Keep this function
   const getTimeAgo = (timestamp) => {
   if (!timestamp) return ''
 
-  // Parse timestamp as UTC
-  const date = new Date(timestamp + 'Z') // the 'Z' forces UTC
+  const date = new Date(timestamp + 'Z')
   const now = new Date()
 
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
@@ -87,13 +85,10 @@ const BillingNotification = () => {
 
 
   const formatTimestamp = (timestamp) => {
-  // Supabase timestamps are in UTC
   const date = new Date(timestamp)
 
-  // Get UTC time in milliseconds
   const utc = date.getTime()
 
-  // Add 8 hours for GMT+8
   const gmt8 = new Date(utc + 8 * 3600000)
 
   return gmt8.toLocaleString('en-US', {

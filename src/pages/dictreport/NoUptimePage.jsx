@@ -233,7 +233,6 @@ const NoUptime = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedSheet]);
 
-  // Handle row selection
   const handleRowSelection = (record) => {
     setSelectedRecords(prev => {
       const isSelected = prev.some(r => r._index === record._index);
@@ -245,7 +244,6 @@ const NoUptime = () => {
     });
   };
 
-  // Handle select all
   const handleSelectAll = () => {
     if (selectedRecords.length === paginatedRecords.length && paginatedRecords.length > 0) {
       setSelectedRecords([]);
@@ -254,7 +252,6 @@ const NoUptime = () => {
     }
   };
 
-  // Handle bulk update
   const handleBulkUpdate = () => {
     if (selectedRecords.length === 0) {
       alert('Please select at least one record');
@@ -606,8 +603,6 @@ const NoUptime = () => {
           </div>
         </div>
       </div>
-
-      {/* Update Uptime Modal */}
       {selectedRecords.length > 0 && (
         <UpdateUptimeModal
           isOpen={isUpdateModalOpen}

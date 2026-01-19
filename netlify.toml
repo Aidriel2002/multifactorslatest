@@ -2,3 +2,16 @@
   from = "/*"
   to = "/index.html"
   status = 200
+  
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com;
+      frame-src https://www.google.com https://www.gstatic.com;
+      child-src https://www.google.com https://www.gstatic.com;
+      img-src 'self' data: https://www.google.com https://www.gstatic.com;
+      connect-src 'self' https://www.google.com https://www.gstatic.com;
+      style-src 'self' 'unsafe-inline';
+    """

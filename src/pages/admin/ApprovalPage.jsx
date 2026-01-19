@@ -13,7 +13,6 @@ const ApprovalPage = () => {
 
   const itemsPerPage = 5
 
-  // Fetch users (reusable)
   const fetchUsers = async () => {
     const { data, error } = await supabase
       .from('users')
@@ -28,7 +27,6 @@ const ApprovalPage = () => {
     setUsers(data || [])
   }
 
-  // Initial load only
   useEffect(() => {
     let mounted = true
 
@@ -75,12 +73,10 @@ const ApprovalPage = () => {
     }
   }
 
-  // Filtering
   const filteredUsers = users.filter(user =>
     filter === 'all' ? true : user.status === filter
   )
 
-  // Pagination
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -98,7 +94,6 @@ const ApprovalPage = () => {
       <AdminSidebar />
 
       <div className="flex-1 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">User Approval</h1>
           <p className="text-sm text-gray-600">
@@ -107,7 +102,6 @@ const ApprovalPage = () => {
         </div>
 
         <div className="p-6">
-          {/* Stats */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             {[
               { label: 'Total Users', value: stats.total },
@@ -126,7 +120,6 @@ const ApprovalPage = () => {
             ))}
           </div>
 
-          {/* Filters (RESET PAGE HERE ✅) */}
           <div className="flex space-x-2 mb-4">
             {['all', 'pending', 'approved', 'rejected'].map(status => (
               <button
@@ -146,7 +139,6 @@ const ApprovalPage = () => {
             ))}
           </div>
 
-          {/* Table */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             {loading ? (
               <div className="text-center py-8">
@@ -233,7 +225,6 @@ const ApprovalPage = () => {
                   </tbody>
                 </table>
 
-                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex justify-between items-center px-4 py-3 border-t">
                     <button

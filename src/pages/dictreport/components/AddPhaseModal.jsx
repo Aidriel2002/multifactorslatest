@@ -4,7 +4,7 @@ const AddPhaseModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     name: '',
     sheets_link: '',
-    sheet_name: 'Sheet1' // Default value
+    sheet_name: 'Sheet1'
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -14,7 +14,6 @@ const AddPhaseModal = ({ isOpen, onClose, onSubmit }) => {
     setError('')
     setLoading(true)
 
-    // Validation
     if (!formData.name.trim()) {
       setError('Phase name is required')
       setLoading(false)
@@ -35,7 +34,6 @@ const AddPhaseModal = ({ isOpen, onClose, onSubmit }) => {
 
     try {
       await onSubmit(formData)
-      // Reset form on success
       setFormData({ name: '', sheets_link: '', sheet_name: 'Sheet1' })
       setError('')
       onClose()

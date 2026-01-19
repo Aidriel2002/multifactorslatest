@@ -9,7 +9,6 @@ const EmployeeDashboard = () => {
       <EmployeeSidebar />
       
       <div className="flex-1 ml-64 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
@@ -17,9 +16,7 @@ const EmployeeDashboard = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-6">
-          {/* Welcome Section */}
           <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
             <div className="px-6 py-5">
               <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -31,7 +28,6 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          {/* Profile Information */}
           <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
             <div className="px-6 py-5">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -62,7 +58,6 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          {/* Quick Stats */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-6">
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
@@ -113,7 +108,6 @@ const EmployeeDashboard = () => {
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-6 py-5">
               <h3 className="text-lg font-medium text-gray-900 mb-4">

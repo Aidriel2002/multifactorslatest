@@ -24,9 +24,7 @@ const ToPayBill = () => {
     monthsPaid: 1
   })
 
-  /* =========================
-     FETCH PROVIDERS
-  ========================== */
+
   useEffect(() => {
     let isMounted = true
 
@@ -56,9 +54,7 @@ const ToPayBill = () => {
     }
   }, [])
 
-  /* =========================
-     HELPERS
-  ========================== */
+
   const getDueDate = (dueDay, lastPaidMonth) => {
     const today = new Date()
     const currentMonth = today.getMonth()
@@ -122,9 +118,6 @@ const ToPayBill = () => {
     )
   }
 
-  /* =========================
-     PAYMENT HANDLERS
-  ========================== */
   const openPaymentModal = (provider) => {
     setPaymentModal({ isOpen: true, provider })
     setPaymentForm({
@@ -192,9 +185,6 @@ const ToPayBill = () => {
     window.location.reload()
   }
 
-  /* =========================
-     CATEGORIZE BILLS
-  ========================== */
   const categorizedBills = {
     overdue: [],
     dueSoon: [],
@@ -220,9 +210,6 @@ const ToPayBill = () => {
     }
   })
 
-  /* =========================
-     RENDER TABLE SECTION
-  ========================== */
   const renderBillSection = (title, bills, bgColor, icon) => {
     if (bills.length === 0) return null
 
@@ -302,9 +289,6 @@ const ToPayBill = () => {
     )
   }
 
-  /* =========================
-     JSX
-  ========================== */
   return (
     <div className="flex h-screen bg-gray-100">
       <BillingsSidebar />
@@ -313,7 +297,6 @@ const ToPayBill = () => {
         <BillingNavbar title="Bills to Pay" subtitle="Process and manage your bill payments" />
 
         <div className="p-6">
-          {/* SEARCH */}
           <div className="mb-6">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -339,7 +322,6 @@ const ToPayBill = () => {
             </div>
           ) : (
             <>
-              {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg border-l-4 border-red-500">
                   <div className="flex items-center justify-between">
@@ -372,7 +354,6 @@ const ToPayBill = () => {
                 </div>
               </div>
 
-              {/* Categorized Bill Sections */}
               {renderBillSection(
                 'Overdue Bills',
                 categorizedBills.overdue,
@@ -394,7 +375,6 @@ const ToPayBill = () => {
                 '📅'
               )}
 
-              {/* No Bills Message */}
               {categorizedBills.overdue.length === 0 &&
                categorizedBills.dueSoon.length === 0 &&
                categorizedBills.upcoming.length === 0 && (
@@ -410,7 +390,6 @@ const ToPayBill = () => {
         </div>
       </div>
 
-      {/* PAYMENT MODAL */}
       {paymentModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
