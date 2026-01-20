@@ -143,8 +143,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
             rowNumber: currentSheet._rowNumber || null
           };
 
-          console.log(`[AddDowntime] Processing site ${i + 1}/${totalReports}:`, siteCode);
-
           if (onSubmit) {
             const result = await onSubmit(downtimeData);
             

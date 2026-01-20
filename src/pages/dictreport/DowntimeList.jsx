@@ -7,7 +7,6 @@ import { fetchSitesFromGoogleSheets } from "../../lib/googleSheetsAPI";
 
 const DowntimeList = () => {
   const { profile } = useAuth();
-
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState("");
   const [availableSheets, setAvailableSheets] = useState([]);

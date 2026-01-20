@@ -8,7 +8,7 @@ const EscalationReport = () => {
   const { profile } = useAuth();
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState("");
-  const [selectedProject, setSelectedProject] = useState(""); // New state for project filter
+  const [selectedProject, setSelectedProject] = useState(""); 
   const [availableSheets, setAvailableSheets] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState("");
   const [escalationRecords, setEscalationRecords] = useState([]);
@@ -253,7 +253,6 @@ const EscalationReport = () => {
   const filteredRecords = useMemo(() => {
     let filtered = escalationRecords;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(record => {
         return Object.values(record).some(value => 

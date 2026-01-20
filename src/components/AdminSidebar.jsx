@@ -47,7 +47,6 @@ const AdminSidebar = () => {
         ))}
       </nav>
 
-      {/* User Profile */}
       <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
@@ -78,7 +77,6 @@ const AdminSidebar = () => {
             </svg>
           </button>
 
-          {/* Dropdown Menu */}
           {showUserMenu && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-800 rounded-lg shadow-lg overflow-hidden">
               <Link

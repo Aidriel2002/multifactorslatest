@@ -48,7 +48,6 @@ const LandingPage = () => {
   }
 
   const handleLearnMoreClick = () => {
-    // Scroll to about section
     document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })
   }
 

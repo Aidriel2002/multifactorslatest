@@ -29,12 +29,9 @@ const EmployeeSidebar = () => {
 
   return (
     <div className="flex flex-col h-screen bg-green-900 text-white w-64 fixed left-0 top-0">
-      {/* Logo/Header */}
       <div className="p-4 border-b border-green-700">
         <h1 className="text-xl font-bold">Multifactors Sales</h1>
       </div>
-
-      {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto py-4">
         {employeeMenuItems.map((item, index) => (
           <Link
@@ -51,8 +48,6 @@ const EmployeeSidebar = () => {
           </Link>
         ))}
       </nav>
-
-      {/* User Profile Section */}
       <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
@@ -83,7 +78,6 @@ const EmployeeSidebar = () => {
             </svg>
           </button>
 
-          {/* Dropdown Menu */}
           {showUserMenu && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-800 rounded-lg shadow-lg overflow-hidden">
               <Link

@@ -44,10 +44,8 @@ const Providers = () => {
     const currentMonth = today.getMonth()
     const currentYear = today.getFullYear()
     
-    // Create due date for current month
     let dueDate = new Date(currentYear, currentMonth, parseInt(dueDay))
     
-    // If last payment was made this month, move to next month
     if (lastPaidMonth) {
       const lastPaid = new Date(lastPaidMonth)
       if (lastPaid.getMonth() === currentMonth && lastPaid.getFullYear() === currentYear) {
@@ -134,7 +132,6 @@ const Providers = () => {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
 
-    // Validate required fields
     if (!formData.site_name || !formData.account_name || !formData.account_number || 
         !formData.email || !formData.phone || !formData.due_day || !formData.monthly_payment) {
       alert('Please fill in all required fields')
@@ -152,7 +149,6 @@ const Providers = () => {
       remarks: formData.remarks
     }
 
-    // If marking as paid, update last_paid_month
     if (formData.remarks === 'Paid') {
       submitData.last_paid_month = new Date().toISOString()
     }

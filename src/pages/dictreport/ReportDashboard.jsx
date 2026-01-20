@@ -21,8 +21,8 @@ const ReportDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' }); // Add this line
-  const [selectedRows, setSelectedRows] = useState([]); // Add this line for multi-select
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' }); 
+  const [selectedRows, setSelectedRows] = useState([]); 
   const [googleAuthToken, setGoogleAuthToken] = useState(() => {
     const stored = sessionStorage.getItem('google_sheets_token');
     if (stored) {
@@ -108,15 +108,6 @@ const ReportDashboard = () => {
     throw new Error('No Google OAuth token available. Please connect Google Sheets first.');
   }
   
-  console.log('[WriteToSheet] Starting write for:', { 
-    sheetName, 
-    siteCode, 
-    startTime, 
-    endTime, 
-    cause, 
-    actionTaken 
-  });
-  
   const checkUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A:S`;
   
   const checkResponse = await fetch(checkUrl, {
@@ -134,8 +125,6 @@ const ReportDashboard = () => {
   const checkData = await checkResponse.json();
   const allRows = checkData.values || [];
   
-  console.log('[WriteToSheet] Total rows in sheet:', allRows.length);
-  
   let lastRowWithData = 0;
   for (let i = 0; i < allRows.length; i++) {
     const row = allRows[i];
@@ -145,10 +134,6 @@ const ReportDashboard = () => {
   }
   
   const targetRow = lastRowWithData + 1;
-  
-  console.log('[WriteToSheet] Last row with data:', lastRowWithData);
-  console.log('[WriteToSheet] Writing to row:', targetRow);
-  
   const requests = [
     {
       range: `${sheetName}!A${targetRow}`,
@@ -172,8 +157,6 @@ const ReportDashboard = () => {
     }
   ];
   
-  console.log('[WriteToSheet] Batch update requests:', requests);
-  
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`;
   
   const response = await fetch(url, {
@@ -195,8 +178,6 @@ const ReportDashboard = () => {
   }
   
   const result = await response.json();
-  console.log('[WriteToSheet] ✅ Write successful:', result);
-  
   return { ...result, targetRow, siteCode };
 };
 
@@ -304,8 +285,6 @@ const ReportDashboard = () => {
       token = await requestGoogleAuth();
     }
 
-    console.log('[Dashboard] Submitting downtime for site:', downtimeData.siteCode);
-
     const result = await writeDowntimeToSheet({
       spreadsheetId: spreadsheetId,
       sheetName: downtimeData.targetSheet,
@@ -317,8 +296,6 @@ const ReportDashboard = () => {
       token: token
     });
 
-    console.log('[Dashboard] ✅ Successfully written to row:', result.targetRow);
-    
     return result;
   } catch (error) {
     console.error('[Dashboard] ❌ Write failed:', error);

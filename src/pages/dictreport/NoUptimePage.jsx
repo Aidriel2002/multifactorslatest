@@ -276,7 +276,6 @@ const NoUptime = () => {
 
       const formattedEnd = formatDateTime(uptime);
       
-      // Prepare batch update for all selected records
       const updates = selectedRecords.map(record => {
         const columnLetter = String.fromCharCode(65 + record._endTimeColumnIndex);
         return {
@@ -320,7 +319,6 @@ const NoUptime = () => {
     setIsBulkUpdate(false);
   };
 
-  // Create modal record for display
   const getModalRecord = () => {
     if (selectedRecords.length === 0) return null;
 

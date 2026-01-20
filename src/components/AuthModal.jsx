@@ -203,13 +203,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     e.preventDefault()
     setError('')
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
     }
 
-    // Validate password length
     if (password.length < 6) {
       setError('Password must be at least 6 characters long')
       return
@@ -227,7 +225,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     if (error) {
       setError(error.message)
       setLoading(false)
-      // Reset reCAPTCHA on error
       if (window.grecaptcha && recaptchaWidgetId.current !== null) {
         window.grecaptcha.reset(recaptchaWidgetId.current)
         setRecaptchaToken(null)
@@ -241,7 +238,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   const switchMode = () => {
     const newMode = mode === 'login' ? 'signup' : 'login'
     
-    // Reset reCAPTCHA before switching
     if (recaptchaWidgetId.current !== null && window.grecaptcha) {
       try {
         window.grecaptcha.reset(recaptchaWidgetId.current)
@@ -262,7 +258,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[95vh] overflow-y-auto">
-        {/* Header with gradient */}
         <div className="relative bg-gradient-to-r from-[#235312] to-[#2B6616] p-6 rounded-t-2xl">
           <button
             onClick={onClose}
@@ -278,7 +273,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           </p>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {success ? (
             <div className="space-y-6 text-center py-8">
@@ -407,7 +401,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                 </div>
               )}
 
-              {/* reCAPTCHA - Shows in both login and signup */}
               <div className="flex justify-center">
                 <div ref={recaptchaContainerRef}></div>
               </div>

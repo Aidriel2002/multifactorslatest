@@ -10,7 +10,6 @@ const Navigation = ({ onLoginClick }) => {
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-[90%] mx-auto px-4 md:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Desktop Navigation Links */}
           <div className="desktop-nav flex items-center space-x-6">
             {navLinks.map((link) => (
               <a
@@ -23,7 +22,6 @@ const Navigation = ({ onLoginClick }) => {
             ))}
           </div>
 
-          {/* Desktop Login Button */}
           <div className="desktop-login">
             <button 
               onClick={onLoginClick}
@@ -33,7 +31,6 @@ const Navigation = ({ onLoginClick }) => {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="mobile-menu-btn">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -44,7 +41,6 @@ const Navigation = ({ onLoginClick }) => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="mobile-menu py-4 border-t">
             <div className="flex flex-col space-y-4">
