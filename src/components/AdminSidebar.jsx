@@ -10,7 +10,6 @@ const adminMenuItems = [
   { label: 'Billings', path: '/billings', icon: '💰' },
   { label: 'System Settings', path: '/admin/system', icon: '⚙️' },
 ]
-
 const AdminSidebar = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -21,7 +20,6 @@ const AdminSidebar = () => {
     await signOut()
     navigate('/login')
   }
-
   const isActive = (path) => location.pathname === path
 
   return (
@@ -29,7 +27,6 @@ const AdminSidebar = () => {
       <div className="p-4 border-b border-green-700">
         <h1 className="text-xl font-bold">Multifactors Sales</h1>
       </div>
-
       <nav className="flex-1 overflow-y-auto py-4">
         {adminMenuItems.map((item, index) => (
           <Link
@@ -46,7 +43,6 @@ const AdminSidebar = () => {
           </Link>
         ))}
       </nav>
-
       <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
@@ -76,7 +72,6 @@ const AdminSidebar = () => {
               />
             </svg>
           </button>
-
           {showUserMenu && (
             <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-800 rounded-lg shadow-lg overflow-hidden">
               <Link
@@ -131,5 +126,4 @@ const AdminSidebar = () => {
     </aside>
   )
 }
-
 export default AdminSidebar

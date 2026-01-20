@@ -307,7 +307,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   <p className="text-sm text-red-800 font-medium">{error}</p>
                 </div>
               )}
-
               {mode === 'signup' && (
                 <div>
                   <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -327,7 +326,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   </div>
                 </div>
               )}
-
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address
@@ -345,7 +343,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   />
                 </div>
               </div>
-
               <div>
                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                   Password
@@ -370,7 +367,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   </button>
                 </div>
               </div>
-
               {mode === 'signup' && (
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -400,11 +396,9 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   )}
                 </div>
               )}
-
               <div className="flex justify-center">
                 <div ref={recaptchaContainerRef}></div>
               </div>
-
               <button
                 type="submit"
                 disabled={loading || !recaptchaToken}
