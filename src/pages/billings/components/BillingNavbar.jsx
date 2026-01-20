@@ -32,10 +32,6 @@ const BillingNavbar = ({ title, subtitle, onAddProvider }) => {
               <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
                 {profile?.full_name?.charAt(0).toUpperCase()}
               </div>
-              <div className="ml-2">
-                <p className="text-sm font-medium text-gray-700">{profile?.full_name}</p>
-                <p className="text-xs text-gray-500">Billing Admin</p>
-              </div>
             </div>
           </div>
         </div>
