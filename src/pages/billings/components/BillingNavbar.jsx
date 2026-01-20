@@ -1,8 +1,6 @@
-import { useAuth } from '../../../contexts/AuthContext'
 import BillingNotification from './BillingNotification'
 
 const BillingNavbar = ({ title, subtitle, onAddProvider }) => {
-  const { profile } = useAuth()
 
   return (
     <div className="bg-white shadow-md">
@@ -28,11 +26,7 @@ const BillingNavbar = ({ title, subtitle, onAddProvider }) => {
 
             <BillingNotification />
 
-            <div className="hidden md:flex items-center">
-              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
-                {profile?.full_name?.charAt(0).toUpperCase()}
-              </div>
-            </div>
+            
           </div>
         </div>
       </div>
