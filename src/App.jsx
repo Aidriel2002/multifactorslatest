@@ -23,7 +23,6 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import ApprovalPage from './pages/admin/ApprovalPage'
 import EmployeeDashboard from './pages/employee/EmployeeDashboard'
 
-// Import landing page components
 import Header from './pages/landingpage/layouts/Header'
 import Navigation from './pages/landingpage/layouts/Navigation'
 import Footer from './pages/landingpage/layouts/Footer'
@@ -31,7 +30,13 @@ import HeroSection from './pages/landingpage/sections/HeroSection'
 import AboutSection from './pages/landingpage/sections/AboutSection'
 import ProjectSection from './pages/landingpage/sections/ProjectSection'
 import ServicesSection from './pages/landingpage/sections/ServicesSection'
+
+import ContactsDashboard from './pages/contacts/ContactsDashboard'
+
 import AuthModal from './components/AuthModal'
+
+
+
 
 const LandingPage = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -99,7 +104,6 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="approval" element={<ApprovalPage />} />
             <Route path="reports" element={<div className="p-6">Reports</div>} />
-            <Route path="analytics" element={<div className="p-6">Analytics</div>} />
             <Route path="system" element={<div className="p-6">System Settings</div>} />
           </Route>
 
@@ -108,6 +112,8 @@ function App() {
           <Route path="/billings/to-pay" element={<ProtectedRoute><ToPayBill /></ProtectedRoute>} />
           <Route path="/billings/logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
           <Route path="/billings/payments" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
+
+          <Route path="/contacts/dashboard" element={<ProtectedRoute><ContactsDashboard /></ProtectedRoute>} />
 
           <Route path="/dictreport" element={<ProtectedRoute><ReportDashboard /></ProtectedRoute>} />
           <Route path="/downtime-list" element={<ProtectedRoute><DowntimeList /></ProtectedRoute>} />

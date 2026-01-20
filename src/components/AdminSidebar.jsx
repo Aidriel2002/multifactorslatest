@@ -6,7 +6,7 @@ const adminMenuItems = [
   { label: 'Dashboard', path: '/admin', icon: '📊' },
   { label: 'User Approval', path: '/admin/approval', icon: '✅' },
   { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
-  { label: 'Contacts', path: '/admin/analytics', icon: '📉' },
+  { label: 'Contacts', path: '/contacts/dashboard', icon: '📉' },
   { label: 'Billings', path: '/billings', icon: '💰' },
   { label: 'System Settings', path: '/admin/system', icon: '⚙️' },
 ]
