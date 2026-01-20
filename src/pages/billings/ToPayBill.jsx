@@ -293,7 +293,7 @@ const ToPayBill = () => {
     <div className="flex h-screen bg-gray-100">
       <BillingsSidebar />
 
-      <div className="flex-1 ml-64 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
         <BillingNavbar title="Bills to Pay" subtitle="Process and manage your bill payments" />
 
         <div className="p-6">
@@ -323,7 +323,7 @@ const ToPayBill = () => {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg border-l-4 border-red-500">
+                <div className="bg-red-100 p-6 rounded-lg border-l-4 border-red-500">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-red-600 font-medium">Overdue Bills</p>
@@ -332,8 +332,7 @@ const ToPayBill = () => {
                     <span className="text-4xl">🚨</span>
                   </div>
                 </div>
-
-                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg border-l-4 border-yellow-500">
+                <div className="bg-yellow-100 p-6 rounded-lg border-l-4 border-yellow-500">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-yellow-600 font-medium">Due This Week</p>
@@ -342,8 +341,7 @@ const ToPayBill = () => {
                     <span className="text-4xl">⏰</span>
                   </div>
                 </div>
-
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border-l-4 border-blue-500">
+                <div className="bg-blue-100 p-6 rounded-lg border-l-4 border-blue-500">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-blue-600 font-medium">Upcoming Bills</p>
@@ -353,14 +351,12 @@ const ToPayBill = () => {
                   </div>
                 </div>
               </div>
-
               {renderBillSection(
                 'Overdue Bills',
                 categorizedBills.overdue,
                 'bg-red-100',
                 '🚨'
               )}
-
               {renderBillSection(
                 'Due This Week',
                 categorizedBills.dueSoon,
@@ -392,7 +388,7 @@ const ToPayBill = () => {
 
       {paymentModal.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full overflow-y-auto" style={{ maxHeight: '90vh' }}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Process Payment</h2>

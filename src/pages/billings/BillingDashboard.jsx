@@ -105,7 +105,7 @@ const BillingDashboard = () => {
     <div className="flex h-screen bg-gray-100">
       <BillingsSidebar />
 
-      <div className="flex-1 ml-64 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
         <BillingNavbar 
           title="Billing Dashboard" 
           subtitle="Overview of your billing and payment activities"
@@ -119,9 +119,8 @@ const BillingDashboard = () => {
 
           ) : (
             <>
-            
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-6">
-              <div className="mt-6 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg shadow-lg p-6">
+              {/* Action Card */}
+              <div className="mb-6 bg-indigo-600 rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div className="text-white">
                     <h3 className="text-lg font-semibold mb-1">Ready to manage your bills?</h3>
@@ -137,7 +136,7 @@ const BillingDashboard = () => {
 
                     <button
                       onClick={() => navigate('/billings/providers')}
-                      className="px-6 py-3 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-400 transition"
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-500 transition"
                     >
                       Manage Providers
                     </button>
@@ -145,6 +144,9 @@ const BillingDashboard = () => {
                   </div>
                 </div>
               </div>
+            
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
                 <div className="bg-white overflow-hidden shadow-lg rounded-lg border-l-4 border-green-500">
                   <div className="p-5">
                     <div className="flex items-center">
