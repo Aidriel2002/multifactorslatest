@@ -258,7 +258,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[95vh] overflow-y-auto">
-        <div className="relative bg-gradient-to-r from-[#235312] to-[#2B6616] p-6 rounded-t-2xl">
+        <div className="relative bg-[#2B6616] p-6 rounded-t-2xl">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
@@ -295,7 +295,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   setSuccess(false)
                   setMode('login')
                 }}
-                className="w-full py-3 px-4 bg-gradient-to-r from-[#235312] to-[#2B6616] text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                className="w-full py-3 px-4 bg-[#2B6616] text-white font-semibold rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
               >
                 Go to Sign In
               </button>
