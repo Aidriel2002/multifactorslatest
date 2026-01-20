@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import taweng from '../images/taweng.jpg';
+import molave from '../images/molave.png';
+import bukidnon from '../images/bukidnon.png';
+import houseOfYang from '../images/houseOfYang.png';
+import misor from '../images/misor.png';
+import misoc from '../images/misoc.png';
+import lanao from '../images/lanao.png';
 
 const ProjectSection = () => {
   const [visibleCards, setVisibleCards] = useState([]);
@@ -11,32 +16,32 @@ const ProjectSection = () => {
     { 
       title: 'CCTV Installation', 
       description: 'Integrated Bus Terminal, Molave',
-      image: taweng 
+      image: molave 
     },
     { 
       title: 'DICT Free Wi-Fi Installation', 
       description: 'Misamis Oriental',
-      image: taweng 
+      image: misor 
     },
     { 
       title: 'DICT Free Wi-Fi Installation', 
       description: 'Lanao del Norte',
-      image: taweng 
+      image: lanao 
     },
     { 
       title: 'DICT Free Wi-Fi Installation', 
       description: 'Misamis Occidental',
-      image: taweng 
+      image: misoc 
     },
     { 
       title: 'DICT Free Wi-Fi Installation', 
       description: 'Bukidnon',
-      image: taweng 
+      image: bukidnon 
     },
     { 
       title: 'CCTV Installation', 
       description: 'House of Yang, Cagayan de Oro',
-      image: taweng 
+      image: houseOfYang 
     },
   ];
 

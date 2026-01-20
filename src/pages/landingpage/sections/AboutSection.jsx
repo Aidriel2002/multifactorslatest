@@ -106,11 +106,11 @@ const AboutSection = () => {
 
             <div className="grid grid-cols-3 gap-6 pt-4">
               <div className="text-center">
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#235312] to-[#3a8419]">30+</div>
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-[#235312]">30+</div>
                 <div className="text-sm text-gray-600 mt-1">Years</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#235312] to-[#3a8419]">200+</div>
+                <div className="text-3xl font-bold text-transparent bg-clip-text bg-[#3a8419]">200+</div>
                 <div className="text-sm text-gray-600 mt-1">Projects</div>
               </div>
             </div>
