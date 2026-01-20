@@ -12,7 +12,6 @@ const ContactsDashboard = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingContact, setEditingContact] = useState(null)
   
-  // Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
