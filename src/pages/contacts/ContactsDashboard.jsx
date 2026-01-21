@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import AdminSidebar from '../../components/AdminSidebar'
@@ -20,11 +20,7 @@ const ContactsDashboard = () => {
 
   const Sidebar = profile?.role === 'admin' ? AdminSidebar : EmployeeSidebar
 
-  useEffect(() => {
-    fetchContacts()
-  }, [])
-
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('contacts')
@@ -37,7 +33,26 @@ const ContactsDashboard = () => {
       setContacts(data || [])
     }
     setLoading(false)
-  }
+  }, [])
+
+  useEffect(() => {
+    const fetchContacts = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching contacts:', error)
+      } else {
+        setContacts(data || [])
+      }
+      setLoading(false)
+    }
+
+    fetchContacts()
+  }, [])
 
   const handleAddContact = async (contactData) => {
     if (editingContact) {
