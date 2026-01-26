@@ -175,14 +175,13 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       if (error) {
         setError(error.message)
         setLoading(false)
-        // Reset reCAPTCHA on error
         if (window.grecaptcha && recaptchaWidgetId.current !== null) {
           window.grecaptcha.reset(recaptchaWidgetId.current)
           setRecaptchaToken(null)
         }
       } else {
         onClose()
-        navigate('/billings')
+        navigate('/dictreport')
       }
     } catch (err) {
       console.error('Login exception:', err)

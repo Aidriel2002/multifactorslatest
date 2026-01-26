@@ -32,6 +32,9 @@ import ActivityLogs from './pages/billings/ActivityLogs'
 import PaymentHistory from './pages/billings/PaymentHistory'
 
 import QuotationDashboard from './pages/quotation/QuotationDashboard'
+import Project from './pages/quotation/pages/Project'
+import Quotation from './pages/quotation/pages/Quotation'
+import PurchaseOrder from './pages/quotation/pages/PurchaseOrder'
 
 
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
@@ -110,10 +113,10 @@ function App() {
           </Route>
 
           <Route path="/billings" element={<ProtectedRoute><BillingDashboard /></ProtectedRoute>} />
-          <Route path="/billings/providers" element={<ProtectedRoute><Providers /></ProtectedRoute>} />
-          <Route path="/billings/to-pay" element={<ProtectedRoute><ToPayBill /></ProtectedRoute>} />
-          <Route path="/billings/logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
-          <Route path="/billings/payments" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
+          <Route path="/providers" element={<ProtectedRoute><Providers /></ProtectedRoute>} />
+          <Route path="/paybill" element={<ProtectedRoute><ToPayBill /></ProtectedRoute>} />
+          <Route path="/logs" element={<ProtectedRoute><ActivityLogs /></ProtectedRoute>} />
+          <Route path="/payments" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
 
           <Route path="/contacts/dashboard" element={<ProtectedRoute><ContactsDashboard /></ProtectedRoute>} />
 
@@ -123,6 +126,10 @@ function App() {
           <Route path="/escalation" element={<ProtectedRoute><EscalationReport /></ProtectedRoute>} />
 
           <Route path="/quotation" element={<ProtectedRoute><QuotationDashboard /></ProtectedRoute>} />
+          <Route path="/managequotation" element={<ProtectedRoute><Quotation /></ProtectedRoute>} />
+          <Route path="/project" element={<ProtectedRoute><Project /></ProtectedRoute>} />
+          <Route path="/purchase-order" element={<ProtectedRoute><PurchaseOrder /></ProtectedRoute>} />
+          
 
           <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
 

@@ -5,10 +5,10 @@ import './BillingsSidebar.css'
 
 const billingsMenuItems = [
   { label: 'Dashboard', path: '/billings', icon: '📊' },
-  { label: 'Providers', path: '/billings/providers', icon: '🏢' },
-  { label: 'Pay Bill', path: '/billings/to-pay', icon: '💰' },
-  { label: 'Activity Logs', path: '/billings/logs', icon: '📋' },
-  { label: 'Payment History', path: '/billings/payments', icon: '💳' },
+  { label: 'Providers', path: '/providers', icon: '🏢' },
+  { label: 'Pay Bill', path: '/paybill', icon: '💰' },
+  { label: 'Activity Logs', path: '/logs', icon: '📋' },
+  { label: 'Payment History', path: '/payments', icon: '💳' },
 ]
 
 const BillingsSidebar = () => {

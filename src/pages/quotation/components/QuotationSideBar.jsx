@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 
-const billingsMenuItems = [
-  { label: 'Dashboard', path: '/test', icon: '📊' },
-  { label: 'Providers', path: '/test/providers', icon: '🏢' },
-  { label: 'Pay Bill', path: '/test/to-pay', icon: '💰' },
-  { label: 'Activity Logs', path: '/test/logs', icon: '📋' },
-  { label: 'Payment History', path: '/test/payments', icon: '💳' },
+const quotationMenuItems = [
+  { label: 'Dashboard', path: '/quotation', icon: '📊' },
+  { label: 'Quotation', path: '/managequotation', icon: '📝' },
+  { label: 'Project', path: '/project', icon: '📁' },
+  { label: 'Purchase Order', path: '/purchase-order', icon: '📋' },
 ]
 
 const QuotationSideBar = () => {
@@ -27,7 +26,7 @@ const QuotationSideBar = () => {
     <aside className="billings-sidebar fixed left-0 top-0 z-50">
       <div className="flex flex-col h-screen w-64 bg-green-900 text-white">
         <div className="p-4 border-b border-green-700">
-          <h1 className="text-xl font-bold">📝 Quotations</h1>
+          <h1 className="text-xl font-bold">📝 Quotation System</h1>
           <p className="text-xs text-green-200 mt-1">Quotation Management</p>
         </div>
 
@@ -54,7 +53,7 @@ const QuotationSideBar = () => {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4">
-          {billingsMenuItems.map((item, index) => (
+          {quotationMenuItems.map((item, index) => (
             <Link
               key={index}
               to={item.path}
