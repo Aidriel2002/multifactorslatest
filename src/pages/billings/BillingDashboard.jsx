@@ -119,7 +119,6 @@ const BillingDashboard = () => {
 
           ) : (
             <>
-              {/* Action Card */}
               <div className="mb-6 bg-indigo-600 rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between">
                   <div className="text-white">
@@ -145,7 +144,6 @@ const BillingDashboard = () => {
                 </div>
               </div>
             
-              {/* Stats Grid */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-6">
                 <div className="bg-white overflow-hidden shadow-lg rounded-lg border-l-4 border-green-500">
                   <div className="p-5">

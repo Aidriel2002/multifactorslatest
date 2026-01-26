@@ -7,17 +7,6 @@ import PendingApproval from './pages/PendingApproval'
 import AccountRejected from './pages/AccountRejected'
 import AccountSettings from './pages/AccountSettings'
 
-import BillingDashboard from './pages/billings/BillingDashboard'
-import Providers from './pages/billings/Providers'
-import ToPayBill from './pages/billings/ToPayBill'
-import ActivityLogs from './pages/billings/ActivityLogs'
-import PaymentHistory from './pages/billings/PaymentHistory'
-
-import ReportDashboard from './pages/dictreport/ReportDashboard'
-import DowntimeList from './pages/dictreport/DowntimeList'
-import NoUptimePage from './pages/dictreport/NoUptimePage'
-import EscalationReport from './pages/dictreport/EscalationReport'
-
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ApprovalPage from './pages/admin/ApprovalPage'
@@ -30,6 +19,20 @@ import HeroSection from './pages/landingpage/sections/HeroSection'
 import AboutSection from './pages/landingpage/sections/AboutSection'
 import ProjectSection from './pages/landingpage/sections/ProjectSection'
 import ServicesSection from './pages/landingpage/sections/ServicesSection'
+
+import ReportDashboard from './pages/dictreport/ReportDashboard'
+import DowntimeList from './pages/dictreport/DowntimeList'
+import NoUptimePage from './pages/dictreport/NoUptimePage'
+import EscalationReport from './pages/dictreport/EscalationReport'
+
+import BillingDashboard from './pages/billings/BillingDashboard'
+import Providers from './pages/billings/Providers'
+import ToPayBill from './pages/billings/ToPayBill'
+import ActivityLogs from './pages/billings/ActivityLogs'
+import PaymentHistory from './pages/billings/PaymentHistory'
+
+import QuotationDashboard from './pages/quotation/QuotationDashboard'
+
 
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
 
@@ -103,7 +106,6 @@ function App() {
           >
             <Route index element={<AdminDashboard />} />
             <Route path="approval" element={<ApprovalPage />} />
-            <Route path="reports" element={<div className="p-6">Reports</div>} />
             <Route path="system" element={<div className="p-6">System Settings</div>} />
           </Route>
 
@@ -119,6 +121,8 @@ function App() {
           <Route path="/downtime-list" element={<ProtectedRoute><DowntimeList /></ProtectedRoute>} />
           <Route path="/no-uptime" element={<ProtectedRoute><NoUptimePage /></ProtectedRoute>} />
           <Route path="/escalation" element={<ProtectedRoute><EscalationReport /></ProtectedRoute>} />
+
+          <Route path="/quotation" element={<ProtectedRoute><QuotationDashboard /></ProtectedRoute>} />
 
           <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
 

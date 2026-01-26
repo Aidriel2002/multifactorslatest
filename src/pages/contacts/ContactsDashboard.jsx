@@ -421,7 +421,6 @@ const ContactsDashboard = () => {
         </div>
       </div>
 
-      {/* Add/Edit Contact Modal */}
       <AddContactModal
         isOpen={isAddModalOpen}
         onClose={() => {

@@ -5,9 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 const employeeMenuItems = [
   { label: 'Dashboard', path: '/employee', icon: '📊' },
   { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
+  { label: 'Contacts', path: '/contacts/dashboard', icon: '📉' },
   { label: 'Billings', path: '/billings', icon: '💰' },
-  { label: 'My Tasks', path: '/employee/tasks', icon: '📝' },
-  { label: 'Calendar', path: '/employee/calendar', icon: '📅' },
   { label: 'Documents', path: '/employee/documents', icon: '📄' },
   { label: 'Reports', path: '/employee/reports', icon: '📈' },
 ]
