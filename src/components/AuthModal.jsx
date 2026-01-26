@@ -72,49 +72,40 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   useEffect(() => {
     if (!isOpen) return
 
-    let mounted = true
     let renderTimeout = null
 
     const renderRecaptcha = () => {
-      if (!mounted || !recaptchaContainerRef.current || !window.grecaptcha) return
+      if (!recaptchaContainerRef.current || !window.grecaptcha) return
 
       // Wait for grecaptcha to be ready
       window.grecaptcha.ready(() => {
-        if (!mounted || !recaptchaContainerRef.current) return
+        if (!recaptchaContainerRef.current) return
 
         // If widget already exists, just reset it instead of re-rendering
         if (recaptchaWidgetId.current !== null) {
           try {
             window.grecaptcha.reset(recaptchaWidgetId.current)
             setRecaptchaToken(null)
-            return // Don't render a new one
+            return 
           } catch {
-            // If reset fails, we need to render a new one
             recaptchaWidgetId.current = null
           }
         }
 
-        // Only render if we don't have a widget
         renderTimeout = setTimeout(() => {
-          if (!mounted || !recaptchaContainerRef.current) return
+          if (!recaptchaContainerRef.current) return
 
           try {
             recaptchaWidgetId.current = window.grecaptcha.render(recaptchaContainerRef.current, {
               sitekey: RECAPTCHA_SITE_KEY,
               callback: (token) => {
-                if (mounted) {
-                  setRecaptchaToken(token)
-                }
+                setRecaptchaToken(token)
               },
               'expired-callback': () => {
-                if (mounted) {
-                  setRecaptchaToken(null)
-                }
+                setRecaptchaToken(null)
               },
               'error-callback': () => {
-                if (mounted) {
-                  setRecaptchaToken(null)
-                }
+                setRecaptchaToken(null)
               }
             })
           } catch (e) {
@@ -152,9 +143,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       script.defer = true
       
       script.onload = () => {
-        if (mounted) {
-          renderRecaptcha()
-        }
+        renderRecaptcha()
       }
 
       document.body.appendChild(script)
@@ -163,14 +152,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     loadRecaptcha()
 
     return () => {
-      mounted = false
       if (renderTimeout) {
         clearTimeout(renderTimeout)
       }
     }
   }, [isOpen, mode, RECAPTCHA_SITE_KEY])
-
- 
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
@@ -183,19 +169,25 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
     setLoading(true)
 
-    const { error } = await signIn(email, password)
+    try {
+      const { error } = await signIn(email, password)
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      // Reset reCAPTCHA on error
-      if (window.grecaptcha && recaptchaWidgetId.current !== null) {
-        window.grecaptcha.reset(recaptchaWidgetId.current)
-        setRecaptchaToken(null)
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        // Reset reCAPTCHA on error
+        if (window.grecaptcha && recaptchaWidgetId.current !== null) {
+          window.grecaptcha.reset(recaptchaWidgetId.current)
+          setRecaptchaToken(null)
+        }
+      } else {
+        onClose()
+        navigate('/billings')
       }
-    } else {
-      onClose()
-      navigate('/billings')
+    } catch (err) {
+      console.error('Login exception:', err)
+      setError('An unexpected error occurred. Please try again.')
+      setLoading(false)
     }
   }
 
@@ -220,17 +212,22 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
     setLoading(true)
 
-    const { error } = await signUp(email, password, fullName)
+    try {
+      const { error } = await signUp(email, password, fullName)
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-      if (window.grecaptcha && recaptchaWidgetId.current !== null) {
-        window.grecaptcha.reset(recaptchaWidgetId.current)
-        setRecaptchaToken(null)
+      if (error) {
+        setError(error.message)
+        setLoading(false)
+        if (window.grecaptcha && recaptchaWidgetId.current !== null) {
+          window.grecaptcha.reset(recaptchaWidgetId.current)
+          setRecaptchaToken(null)
+        }
+      } else {
+        setSuccess(true)
+        setLoading(false)
       }
-    } else {
-      setSuccess(true)
+    } catch{
+      setError('An unexpected error occurred. Please try again.')
       setLoading(false)
     }
   }
@@ -399,6 +396,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
               <div className="flex justify-center">
                 <div ref={recaptchaContainerRef}></div>
               </div>
+              
               <button
                 type="submit"
                 disabled={loading || !recaptchaToken}
