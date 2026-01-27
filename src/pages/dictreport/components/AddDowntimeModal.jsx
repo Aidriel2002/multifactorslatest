@@ -8,6 +8,12 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     actionTaken: 'None',
     targetSheet: ''
   });
+  const [startDate, setStartDate] = useState('');
+  const [startHour, setStartHour] = useState('');
+  const [startMinute, setStartMinute] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [endHour, setEndHour] = useState('');
+  const [endMinute, setEndMinute] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [availableSheets, setAvailableSheets] = useState([]);
@@ -32,6 +38,26 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     'None',
     'Technical Visit'
   ];
+
+  // Update formData.startTime when date/time changes
+  useEffect(() => {
+    if (startDate && startHour !== '' && startMinute !== '') {
+      const hour = startHour.toString().padStart(2, '0');
+      const minute = startMinute.toString().padStart(2, '0');
+      setFormData(prev => ({...prev, startTime: `${startDate}T${hour}:${minute}`}));
+    }
+  }, [startDate, startHour, startMinute]);
+
+  // Update formData.endTime when date/time changes
+  useEffect(() => {
+    if (endDate && endHour !== '' && endMinute !== '') {
+      const hour = endHour.toString().padStart(2, '0');
+      const minute = endMinute.toString().padStart(2, '0');
+      setFormData(prev => ({...prev, endTime: `${endDate}T${hour}:${minute}`}));
+    } else if (endDate && (endHour === '' || endMinute === '')) {
+      setFormData(prev => ({...prev, endTime: ''}));
+    }
+  }, [endDate, endHour, endMinute]);
 
   const formatForSheets = (dateString) => {
     if (!dateString) return '';
@@ -204,6 +230,12 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
         actionTaken: 'None',
         targetSheet: availableSheets[0] || ''
       });
+      setStartDate('');
+      setStartHour('');
+      setStartMinute('');
+      setEndDate('');
+      setEndHour('');
+      setEndMinute('');
       setError('');
       setProcessingLog([]);
       setAvailableSheets([]);
@@ -333,26 +365,81 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Start of Downtime (Column F) <span className="text-red-500">*</span>
               </label>
-              <input
-                type="datetime-local"
-                value={formData.startTime}
-                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                />
+                <select
+                  required
+                  value={startHour}
+                  onChange={(e) => setStartHour(e.target.value)}
+                  className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">HH</option>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                  ))}
+                </select>
+                <span className="flex items-center text-gray-500">:</span>
+                <select
+                  required
+                  value={startMinute}
+                  onChange={(e) => setStartMinute(e.target.value)}
+                  className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">MM</option>
+                  {Array.from({ length: 60 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">24-hour format: 00 = midnight, 13 = 1PM, 23 = 11PM</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 End of Downtime (Column G) <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
-              <input
-                type="datetime-local"
-                value={formData.endTime}
-                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                />
+                <select
+                  value={endHour}
+                  onChange={(e) => setEndHour(e.target.value)}
+                  className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">HH</option>
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                  ))}
+                </select>
+                <span className="flex items-center text-gray-500">:</span>
+                <select
+                  value={endMinute}
+                  onChange={(e) => setEndMinute(e.target.value)}
+                  className="w-20 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={loading}
+                >
+                  <option value="">MM</option>
+                  {Array.from({ length: 60 }, (_, i) => (
+                    <option key={i} value={i}>{String(i).padStart(2, '0')}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">24-hour format: 00 = midnight, 13 = 1PM, 23 = 11PM</p>
             </div>
 
             <div>

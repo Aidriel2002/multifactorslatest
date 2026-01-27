@@ -127,14 +127,14 @@ const BillingDashboard = () => {
                   </div>
                   <div className="flex space-x-3">
                     <button
-                      onClick={() => navigate('/billings/to-pay')}
+                      onClick={() => navigate('/paybill')}
                       className="px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition shadow-md"
                     >
                       Pay Bills 
                     </button>
 
                     <button
-                      onClick={() => navigate('/billings/providers')}
+                      onClick={() => navigate('/providers')}
                       className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-500 transition"
                     >
                       Manage Providers

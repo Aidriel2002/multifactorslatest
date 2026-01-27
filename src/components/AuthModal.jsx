@@ -42,7 +42,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       setShowConfirmPassword(false)
       setRecaptchaToken(null)
       
-      // Clean up reCAPTCHA
       if (recaptchaWidgetId.current !== null && window.grecaptcha) {
         try {
           window.grecaptcha.reset(recaptchaWidgetId.current)
@@ -53,7 +52,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     }
   }, [isOpen])
 
-  // Load Google Sheets API
   useEffect(() => {
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
@@ -68,7 +66,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     }
   }, [])
 
-  // Load and render reCAPTCHA
   useEffect(() => {
     if (!isOpen) return
 
@@ -77,11 +74,9 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     const renderRecaptcha = () => {
       if (!recaptchaContainerRef.current || !window.grecaptcha) return
 
-      // Wait for grecaptcha to be ready
       window.grecaptcha.ready(() => {
         if (!recaptchaContainerRef.current) return
 
-        // If widget already exists, just reset it instead of re-rendering
         if (recaptchaWidgetId.current !== null) {
           try {
             window.grecaptcha.reset(recaptchaWidgetId.current)
@@ -122,10 +117,8 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         return
       }
 
-      // Load reCAPTCHA script
       const existingScript = document.querySelector('script[src*="recaptcha"]')
       if (existingScript) {
-        // Script is loading or loaded
         const checkLoaded = setInterval(() => {
           if (window.grecaptcha && window.grecaptcha.render) {
             clearInterval(checkLoaded)
@@ -309,14 +302,13 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                     Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     <input
                       id="fullName"
                       type="text"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
+                      className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
                       placeholder="Enter your Full Name"
                     />
                   </div>
@@ -327,14 +319,13 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     id="email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
+                    className="w-full pl-4 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
                     placeholder="Enter your Email"
                   />
                 </div>
@@ -344,15 +335,14 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
-                    placeholder={mode === 'signup' ? 'Min 6 characters' : 'Enter your Password'}
+                    className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
+                    placeholder={mode === 'signup' ? 'Create your Password' : 'Enter your Password'}
                   />
                   <button
                     type="button"
@@ -369,14 +359,13 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
                     Confirm Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     <input
                       id="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
+                      className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2B6616] focus:border-transparent transition-all"
                       placeholder="Re-enter Password"
                     />
                     <button
