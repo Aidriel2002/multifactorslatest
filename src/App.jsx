@@ -17,6 +17,7 @@ import Navigation from './pages/landingpage/layouts/Navigation'
 import Footer from './pages/landingpage/layouts/Footer'
 import HeroSection from './pages/landingpage/sections/HeroSection'
 import AboutSection from './pages/landingpage/sections/AboutSection'
+import ProductSection from './pages/landingpage/sections/ProductSection'
 import ProjectSection from './pages/landingpage/sections/ProjectSection'
 import ServicesSection from './pages/landingpage/sections/ServicesSection'
 
@@ -36,8 +37,9 @@ import Project from './pages/quotation/pages/Project'
 import Quotation from './pages/quotation/pages/Quotation'
 import PurchaseOrder from './pages/quotation/pages/PurchaseOrder'
 
-
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
+
+import ManageProduct from './pages/landingPageContent/ManageProducts'
 
 import AuthModal from './components/AuthModal'
 
@@ -72,6 +74,7 @@ const LandingPage = () => {
       />
       <AboutSection />
       <ProjectSection />
+      <ProductSection />
       <ServicesSection />
       <Footer />
       
@@ -130,10 +133,12 @@ function App() {
           <Route path="/project" element={<ProtectedRoute><Project /></ProtectedRoute>} />
           <Route path="/purchase-order" element={<ProtectedRoute><PurchaseOrder /></ProtectedRoute>} />
           
+          <Route path="/manageproduct" element={<ProtectedRoute><ManageProduct /></ProtectedRoute>} />
 
           <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
+
         </Routes>
       </AuthProvider>
     </BrowserRouter>

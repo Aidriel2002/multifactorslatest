@@ -9,7 +9,8 @@ const adminMenuItems = [
   { label: 'Contacts', path: '/contacts/dashboard', icon: '📇' },
   { label: 'Billings', path: '/billings', icon: '💰' },
   { label: 'Quotation', path: '/quotation', icon: '📝' },
-  { label: 'System', path: '/admin/system', icon: '⚙️' },
+  { label: 'Expenses', path: '/expenses', icon: '💸' },
+  { label: 'Landing Page Setup', path: '/manageproduct', icon: '⚙️' },
 ]
 const AdminSidebar = () => {
   const location = useLocation()

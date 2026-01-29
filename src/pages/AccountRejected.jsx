@@ -1,10 +1,13 @@
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const AccountRejected = () => {
   const { signOut, profile } = useAuth()
+  const navigate = useNavigate()
 
   const handleSignOut = async () => {
     await signOut()
+    navigate('/login')
   }
 
   return (

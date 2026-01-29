@@ -103,12 +103,10 @@ const ContactsDashboard = () => {
     }
   }
 
-  // Get unique values for filters
   const provinces = [...new Set(contacts.map(c => c.province).filter(Boolean))]
   const cities = [...new Set(contacts.filter(c => !selectedProvince || c.province === selectedProvince).map(c => c.city).filter(Boolean))]
   const projects = [...new Set(contacts.map(c => c.project_name).filter(Boolean))]
 
-  // Filter contacts
   const filteredContacts = contacts.filter(contact => {
     const matchesSearch = 
       contact.site_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +134,6 @@ const ContactsDashboard = () => {
       <Sidebar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
-        {/* Header */}
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
@@ -161,7 +158,6 @@ const ContactsDashboard = () => {
         </div>
 
         <div className="p-6">
-          {/* Stats */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="p-5">
@@ -229,12 +225,10 @@ const ContactsDashboard = () => {
             </div>
           </div>
 
-          {/* Filters */}
           <div className="bg-white shadow rounded-lg p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Search */}
               <div className="lg:col-span-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                 <input
@@ -246,7 +240,6 @@ const ContactsDashboard = () => {
                 />
               </div>
 
-              {/* Province */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
                 <select
@@ -264,7 +257,6 @@ const ContactsDashboard = () => {
                 </select>
               </div>
 
-              {/* City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">City/Municipality</label>
                 <select
@@ -280,7 +272,6 @@ const ContactsDashboard = () => {
                 </select>
               </div>
 
-              {/* Project */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
                 <select
@@ -295,7 +286,6 @@ const ContactsDashboard = () => {
                 </select>
               </div>
 
-              {/* Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Contact Type</label>
                 <select
@@ -310,7 +300,6 @@ const ContactsDashboard = () => {
               </div>
             </div>
 
-            {/* Clear Filters */}
             {(searchTerm || selectedProvince || selectedCity || selectedProject || selectedType) && (
               <div className="mt-4">
                 <button
@@ -329,7 +318,6 @@ const ContactsDashboard = () => {
             )}
           </div>
 
-          {/* Contacts Table */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">

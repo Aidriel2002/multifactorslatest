@@ -51,7 +51,7 @@ const ServicesSection = () => {
   }, []);
 
   return (
-    <section id="services" className="py-20 px-4 md:px-8 bg-white" ref={sectionRef}>
+    <section id="services" className="py-20 px-4 md:px-8 bg-gray-50" ref={sectionRef}>
       <div className="max-w-7xl mx-auto">
         <h2 
           ref={titleRef}
@@ -61,7 +61,7 @@ const ServicesSection = () => {
               : 'translate-y-10 opacity-0'
           }`}
         >
-          Our Services
+          Services
         </h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => (

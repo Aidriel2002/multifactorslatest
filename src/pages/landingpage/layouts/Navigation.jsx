@@ -4,7 +4,7 @@ import { Menu, X } from 'lucide-react';
 const Navigation = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const navLinks = ['Home', 'About', 'Project', 'Services'];
+  const navLinks = ['Home', 'About', 'Project', 'Products', 'Services'];
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">

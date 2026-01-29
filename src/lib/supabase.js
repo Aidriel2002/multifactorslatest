@@ -33,3 +33,80 @@ export const isAdmin = async () => {
   const profile = await getCurrentUserProfile()
   return profile?.role === 'admin' && profile?.status === 'approved'
 }
+
+export const productAPI = {
+  // Get all products
+  async getAll() {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Get single product by id
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Create new product
+  async create(product) {
+    const { data, error } = await supabase
+      .from('products')
+      .insert([product])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Update product
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete product
+  async delete(id) {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  // Subscribe to real-time changes
+  subscribeToChanges(callback) {
+    const subscription = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return subscription;
+  }
+};

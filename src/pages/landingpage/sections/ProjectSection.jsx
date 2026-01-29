@@ -93,7 +93,7 @@ const ProjectSection = () => {
               : 'translate-y-10 opacity-0'
           }`}
         >
-          Our Projects
+          Projects
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {projects.map((project, index) => (
@@ -124,6 +124,14 @@ const ProjectSection = () => {
               <p className="text-gray-600">{project.description}</p>
             </div>
           ))}
+        </div>
+        <div className="mt-12 text-center">
+          <a
+            href="#"
+            className="inline-block bg-[#ffffff49] text-green border border-green px-6 py-3 rounded-md hover:scale-105 transition-all duration-300 overflow-hidden hover:bg-[#2B6616]/10 font-bold"
+          >
+            View All Projects
+          </a>
         </div>
       </div>
     </section>
