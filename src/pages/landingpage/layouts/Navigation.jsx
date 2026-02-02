@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Navigation = ({ onLoginClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const navLinks = ['Home', 'About', 'Project', 'Products', 'Services'];
+  const navLinks = [
+    { name: 'Home', path: '/' },
+    { name: 'About', path: '/about' },
+    { name: 'Project', path: '/project' },
+    { name: 'Products', path: '/productlist' },
+    { name: 'Services', path: '/services' }
+  ];
+
+  const handleNavClick = (path) => {
+    navigate(path);
+    setIsMenuOpen(false);
+  };
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
@@ -12,13 +25,13 @@ const Navigation = ({ onLoginClick }) => {
         <div className="flex justify-between items-center h-16">
           <div className="desktop-nav flex items-center space-x-6">
             {navLinks.map((link) => (
-              <a
-                key={link}
-                href={`#${link.toLowerCase()}`}
+              <button
+                key={link.name}
+                onClick={() => handleNavClick(link.path)}
                 className="text-[#2B6616] text-lg hover:text-[#509637] transition-colors font-medium"
               >
-                {link}
-              </a>
+                {link.name}
+              </button>
             ))}
           </div>
 
@@ -45,14 +58,13 @@ const Navigation = ({ onLoginClick }) => {
           <div className="mobile-menu py-4 border-t">
             <div className="flex flex-col space-y-4">
               {navLinks.map((link) => (
-                <a
-                  key={link}
-                  href={`#${link.toLowerCase()}`}
-                  className="text-[#2B6616] hover:text-[#509637] transition-colors font-medium px-2"
-                  onClick={() => setIsMenuOpen(false)}
+                <button
+                  key={link.name}
+                  onClick={() => handleNavClick(link.path)}
+                  className="text-[#2B6616] hover:text-[#509637] transition-colors font-medium px-2 text-left"
                 >
-                  {link}
-                </a>
+                  {link.name}
+                </button>
               ))}
               <button 
                 onClick={() => {

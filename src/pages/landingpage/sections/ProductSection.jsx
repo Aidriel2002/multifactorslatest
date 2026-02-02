@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { productAPI } from '../../../lib/supabase';
 import placeholderImage from '../images/multifactorslogo.jpg';
 
 const ProductSection = () => {
+  const navigate = useNavigate();
   const [titleVisible, setTitleVisible] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const sectionRef = useRef(null);
   const titleRef = useRef(null);
 
@@ -16,28 +19,26 @@ const ProductSection = () => {
 
   useEffect(() => {
     const subscription = productAPI.subscribeToChanges((payload) => {
-      console.log('ProductSection - Real-time update:', payload);
       
       if (payload.eventType === 'INSERT') {
-        // Reload products to maintain proper order/randomization
         loadProducts();
       } else if (payload.eventType === 'UPDATE') {
         setProducts(prev => {
           const updated = prev.map(p => 
             p.id === payload.new.id ? payload.new : p
           );
-          // If the selected product was updated, update it
           if (selectedProduct?.id === payload.new.id) {
             setSelectedProduct(payload.new);
+            setShowFullDescription(false);
           }
           return updated;
         });
       } else if (payload.eventType === 'DELETE') {
         setProducts(prev => {
           const filtered = prev.filter(p => p.id !== payload.old.id);
-          // If the selected product was deleted, select the first available product
           if (selectedProduct?.id === payload.old.id) {
             setSelectedProduct(filtered.length > 0 ? filtered[0] : null);
+            setShowFullDescription(false);
           }
           return filtered;
         });
@@ -53,10 +54,8 @@ const ProductSection = () => {
     try {
       setLoading(true);
       const data = await productAPI.getAll();
-      console.log('ProductSection - Loaded products:', data);
       setProducts(data);
       
-      // Only set selected product if there isn't one already
       if (!selectedProduct && data.length > 0) {
         const displayProducts = getDisplayProductsFromData(data);
         if (displayProducts.length > 0) {
@@ -92,18 +91,14 @@ const ProductSection = () => {
     };
   }, []);
 
-  // Helper function to get display products from any product array
   const getDisplayProductsFromData = (productList) => {
     if (productList.length === 0) return [];
     
-    // Filter products that should be displayed
     const displayableProducts = productList.filter(p => p.display_on_homepage !== false);
     
-    // Check if any products have display_order set
     const hasDisplayOrder = displayableProducts.some(p => p.display_order !== null && p.display_order !== undefined);
     
     if (hasDisplayOrder) {
-      // Sort by display_order (null/undefined goes to end)
       return displayableProducts
         .sort((a, b) => {
           const orderA = a.display_order ?? Number.MAX_SAFE_INTEGER;
@@ -112,20 +107,63 @@ const ProductSection = () => {
         })
         .slice(0, 5);
     } else {
-      // Randomize if no display_order is set
       return [...displayableProducts]
         .sort(() => Math.random() - 0.5)
         .slice(0, 5);
     }
   };
 
-  // Get display products (up to 5, based on display_order or randomized)
   const getDisplayProducts = () => {
     return getDisplayProductsFromData(products);
   };
 
   const handleProductSelect = (product) => {
     setSelectedProduct(product);
+    setShowFullDescription(false); 
+  };
+
+  const handleReadMore = () => {
+    navigate(`/productlist?product=${selectedProduct.id}`);
+  };
+
+  const formatPrice = (price) => {
+    const num = parseFloat(price);
+    if (isNaN(num)) return '0.00';
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const renderFormattedText = (text) => {
+    if (!text) return null;
+
+    const html = text
+      .replace(/<b>/g, '<strong>')
+      .replace(/<\/b>/g, '</strong>')
+      .replace(/<i>/g, '<em>')
+      .replace(/<\/i>/g, '</em>');
+
+    return (
+      <div 
+        className="whitespace-pre-wrap"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  };
+
+  const getTruncatedDescription = (text) => {
+    if (!text) return { truncated: '', needsReadMore: false };
+
+    const lines = text.split('\n');
+    const first5Lines = lines.slice(0, 5).join('\n');
+    
+    const needsReadMore = lines.length > 5;
+
+    return {
+      truncated: first5Lines,
+      needsReadMore
+    };
   };
 
   const displayProducts = getDisplayProducts();
@@ -155,11 +193,9 @@ const ProductSection = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Main Product Display */}
             {selectedProduct && (
               <div className="bg-white rounded-lg shadow-lg overflow-hidden">
                 <div className="grid md:grid-cols-2 gap-8 p-8">
-                  {/* Left Side - Large Image */}
                   <div className="space-y-4">
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg overflow-hidden aspect-square flex items-center justify-center">
                       <img 
@@ -172,7 +208,94 @@ const ProductSection = () => {
                       />
                     </div>
                     
-                    {/* Product List - Other Products */}
+                  </div>
+
+                  <div className="flex flex-col justify-between">
+                    <div className="space-y-4">
+                      <h3 className="text-3xl font-bold text-gray-900">{selectedProduct.title}</h3>
+                      
+                      <div className="text-gray-600 text-lg leading-relaxed">
+                        {(() => {
+                          const { truncated, needsReadMore } = getTruncatedDescription(
+                            selectedProduct.description
+                          );
+
+                          if (showFullDescription) {
+                            return (
+                              <div>
+                                {renderFormattedText(selectedProduct.description)}
+                                {needsReadMore && (
+                                  <button
+                                    onClick={() => setShowFullDescription(false)}
+                                    className="text-green-600 hover:text-green-700 font-medium mt-2 inline-block"
+                                  >
+                                    Show less
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div>
+                                {renderFormattedText(truncated)}
+                                {needsReadMore && (
+                                  <span>
+                                    <span className="text-gray-400">...</span>
+                                    <button
+                                      onClick={handleReadMore}
+                                      className="text-green-600 hover:text-green-700 font-medium ml-1"
+                                    >
+                                      read more
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                        })()}
+                      </div>
+
+                      <div className="space-y-3 pt-4">
+                        {selectedProduct.model && (
+                          <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                            <span className="text-gray-500 font-medium">Brand:</span>
+                            <span className="text-gray-900 font-semibold">{selectedProduct.model}</span>
+                          </div>
+                        )}
+
+                        {selectedProduct.series && (
+                          <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                            <span className="text-gray-500 font-medium">Model:</span>
+                            <span className="text-gray-900 font-semibold">{selectedProduct.series}</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                          <span className="text-gray-500 font-medium">Availability:</span>
+                          <span className={`font-semibold px-3 py-1 rounded-full text-sm ${
+                            selectedProduct.quantity > 0 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {selectedProduct.quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        </div>
+
+                        {selectedProduct.price && (
+                          <div className="flex items-center justify-between py-3 mt-4">
+                            <span className="text-gray-500 font-medium text-lg">Price:</span>
+                            <span className="text-3xl font-bold text-green-600">
+                              ₱{formatPrice(selectedProduct.price)}
+                            </span>
+                          </div>
+                        )}
+
+                        
+                      </div>
+                      
+                    </div>
+                    
+                  </div>
                     {displayProducts.length > 1 && (
                       <div className="space-y-2">
                         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
@@ -203,7 +326,7 @@ const ProductSection = () => {
                                       {product.title}
                                     </p>
                                     <p className="text-xs text-green-600 font-semibold">
-                                      ₱{parseFloat(product.price).toFixed(2)}
+                                      ₱{formatPrice(product.price)}
                                     </p>
                                   </div>
                                 </div>
@@ -212,54 +335,6 @@ const ProductSection = () => {
                         </div>
                       </div>
                     )}
-                  </div>
-
-                  {/* Right Side - Product Details */}
-                  <div className="flex flex-col justify-between">
-                    <div className="space-y-4">
-                      <h3 className="text-3xl font-bold text-gray-900">{selectedProduct.title}</h3>
-                      
-                      <p className="text-gray-600 text-lg leading-relaxed">
-                        {selectedProduct.description}
-                      </p>
-
-                      <div className="space-y-3 pt-4">
-                        {selectedProduct.model && (
-                          <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span className="text-gray-500 font-medium">Model:</span>
-                            <span className="text-gray-900 font-semibold">{selectedProduct.model}</span>
-                          </div>
-                        )}
-
-                        {selectedProduct.series && (
-                          <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                            <span className="text-gray-500 font-medium">Series:</span>
-                            <span className="text-gray-900 font-semibold">{selectedProduct.series}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between py-2 border-b border-gray-200">
-                          <span className="text-gray-500 font-medium">Availability:</span>
-                          <span className={`font-semibold px-3 py-1 rounded-full text-sm ${
-                            selectedProduct.quantity > 0 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            {selectedProduct.quantity > 0 ? 'In Stock' : 'Out of Stock'}
-                          </span>
-                        </div>
-
-                        {selectedProduct.price && (
-                          <div className="flex items-center justify-between py-3 mt-4">
-                            <span className="text-gray-500 font-medium text-lg">Price:</span>
-                            <span className="text-3xl font-bold text-green-600">
-                              ₱{parseFloat(selectedProduct.price).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}

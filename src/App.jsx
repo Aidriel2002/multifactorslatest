@@ -21,6 +21,8 @@ import ProductSection from './pages/landingpage/sections/ProductSection'
 import ProjectSection from './pages/landingpage/sections/ProjectSection'
 import ServicesSection from './pages/landingpage/sections/ServicesSection'
 
+import ProductList from './pages/landingpage/list/ProductList'
+
 import ReportDashboard from './pages/dictreport/ReportDashboard'
 import DowntimeList from './pages/dictreport/DowntimeList'
 import NoUptimePage from './pages/dictreport/NoUptimePage'
@@ -77,6 +79,8 @@ const LandingPage = () => {
       <ProductSection />
       <ServicesSection />
       <Footer />
+
+     
       
       <AuthModal 
         isOpen={isAuthModalOpen}
@@ -97,6 +101,8 @@ function App() {
           <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/account-rejected" element={<AccountRejected />} />
 
+          <Route path="/productlist" element={<ProductList />} />  
+          
           <Route
             path="/employee"
             element={<EmployeeRoute><EmployeeDashboard /></EmployeeRoute>}
