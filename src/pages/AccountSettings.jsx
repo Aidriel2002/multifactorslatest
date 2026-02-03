@@ -114,7 +114,6 @@ const AccountSettings = () => {
                       </span>
                     </div>
                   </div>
-
                   <div className="mt-6">
                     <button
                       type="submit"
@@ -127,17 +126,12 @@ const AccountSettings = () => {
                 </form>
               </div>
             </div>
-
             <div className="bg-white shadow rounded-lg">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Account Details</h2>
               </div>
               <div className="px-6 py-5">
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">User ID</dt>
-                    <dd className="mt-1 text-sm text-gray-900 font-mono">{profile?.id.slice(0, 8)}...</dd>
-                  </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Account Created</dt>
                     <dd className="mt-1 text-sm text-gray-900">

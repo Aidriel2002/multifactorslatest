@@ -342,9 +342,9 @@ const ReportDashboard = () => {
         if (sheetsData.length === 0) {
           console.warn("[Dashboard] ⚠️ No data returned (sheet may be empty or have only headers)");
         } else {
-          console.log();
+          //ahhh wala ambot
         }
-        
+
         setSheets(sheetsData);
       } catch (err) {
         console.error("[Dashboard] ❌ Load failed:", err.message);

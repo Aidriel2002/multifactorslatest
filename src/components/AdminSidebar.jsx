@@ -5,13 +5,16 @@ import { useAuth } from '../contexts/AuthContext'
 const adminMenuItems = [
   { label: 'Dashboard', path: '/admin', icon: '📊' },
   { label: 'User Approval', path: '/admin/approval', icon: '✅' },
-  { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
   { label: 'Contacts', path: '/contacts/dashboard', icon: '📇' },
-  { label: 'Billings', path: '/billings', icon: '💰' },
-  { label: 'Quotation', path: '/quotation', icon: '📝' },
   { label: 'Expenses', path: '/expenses', icon: '💸' },
   { label: 'Landing Page Setup', path: '/manageproduct', icon: '⚙️' },
+  { type: 'header', label: 'Integration' },
+  { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
+  { label: 'Billings', path: '/billings', icon: '💰' },
+  { label: 'Quotation', path: '/quotation', icon: '📝' },
+  
 ]
+
 const AdminSidebar = () => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -31,18 +34,26 @@ const AdminSidebar = () => {
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
         {adminMenuItems.map((item, index) => (
-          <Link
-            key={index}
-            to={item.path}
-            className={`flex items-center px-4 py-3 mx-2 rounded-lg transition-colors ${
-              isActive(item.path)
-                ? 'bg-green-600 text-white'
-                : 'text-gray-300 hover:bg-green-800 hover:text-white'
-            }`}
-          >
-            <span className="text-xl mr-3">{item.icon}</span>
-            <span className="font-medium">{item.label}</span>
-          </Link>
+          item.type === 'header' ? (
+            <div key={index} className="px-4 py-2 mt-4 mb-2">
+              <p className="text-xs font-semibold text-green-300 uppercase tracking-wider">
+                {item.label}
+              </p>
+            </div>
+          ) : (
+            <Link
+              key={index}
+              to={item.path}
+              className={`flex items-center px-4 py-3 mx-2 rounded-lg transition-colors ${
+                isActive(item.path)
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-300 hover:bg-green-800 hover:text-white'
+              }`}
+            >
+              <span className="text-xl mr-3">{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </Link>
+          )
         ))}
       </nav>
       <div className="border-t border-green-700 p-4">

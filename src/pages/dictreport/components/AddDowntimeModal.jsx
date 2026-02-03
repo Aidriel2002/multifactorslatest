@@ -39,7 +39,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     'Technical Visit'
   ];
 
-  // Update formData.startTime when date/time changes
   useEffect(() => {
     if (startDate && startHour !== '' && startMinute !== '') {
       const hour = startHour.toString().padStart(2, '0');
@@ -48,7 +47,6 @@ const AddDowntimeModal = ({ isOpen, onClose, onSubmit, sheet, spreadsheetId }) =
     }
   }, [startDate, startHour, startMinute]);
 
-  // Update formData.endTime when date/time changes
   useEffect(() => {
     if (endDate && endHour !== '' && endMinute !== '') {
       const hour = endHour.toString().padStart(2, '0');

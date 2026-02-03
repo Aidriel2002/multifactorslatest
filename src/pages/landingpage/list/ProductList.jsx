@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { productAPI } from '../../../lib/supabase';
-import { Search, Grid, List, Package, ChevronDown, Filter } from 'lucide-react';
+import { Search, Grid, List, Package, Filter } from 'lucide-react';
 import ProductListModal from '../components/ProductListModal';
 import Navigation from '../layouts/Navigation';
 import Header from '../layouts/Header';
@@ -22,6 +22,35 @@ const ProductList = () => {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  useEffect(() => {
+    const subscription = productAPI.subscribeToChanges((payload) => {
+      
+      if (payload.eventType === 'INSERT') {
+        setProducts(prev => {
+          const exists = prev.some(p => p.id === payload.new.id);
+          if (exists) return prev;
+          return [payload.new, ...prev];
+        });
+      } else if (payload.eventType === 'UPDATE') {
+        setProducts(prev => prev.map(p => 
+          p.id === payload.new.id ? payload.new : p
+        ));
+        if (selectedProduct && selectedProduct.id === payload.new.id) {
+          setSelectedProduct(payload.new);
+        }
+      } else if (payload.eventType === 'DELETE') {
+        setProducts(prev => prev.filter(p => p.id !== payload.old.id));
+        if (selectedProduct && selectedProduct.id === payload.old.id) {
+          closeProductModal();
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [selectedProduct]);
 
   useEffect(() => {
     const productId = searchParams.get('product');
@@ -122,14 +151,14 @@ const ProductList = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Products</h1>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              <div className="relative flex-1 max-w-xl w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <div className="search-bar-wrapper">
+                <Search className="search-icon" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search products..."
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                  className="search-input"
                 />
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -299,7 +328,7 @@ const ProductList = () => {
                             <img
                               src={product.image}
                               alt={product.title}
-                              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 p-2"
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                               onError={(e) => {
                                 e.target.onerror = null;
                                 e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f3f4f6" width="200" height="200"/%3E%3C/svg%3E';
@@ -372,12 +401,12 @@ const ProductList = () => {
                         }}
                       >
                         <div className="flex flex-col sm:flex-row">
-                          <div className="relative w-full sm:w-48 h-48 bg-gray-100 flex-shrink-0 group">
+                          <div className="relative w-full sm:w-48 h-48 bg-gray-100 flex-shrink-0 group overflow-hidden">
                             {product.image ? (
                               <img
                                 src={product.image}
                                 alt={product.title}
-                                className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23f3f4f6" width="200" height="200"/%3E%3C/svg%3E';
@@ -468,6 +497,45 @@ const ProductList = () => {
       )}
 
       <style jsx>{`
+        /* Search Bar Styles */
+        .search-bar-wrapper {
+          position: relative;
+          flex: 1;
+          max-width: 42rem;
+          width: 100%;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          width: 1.25rem;
+          height: 1.25rem;
+          pointer-events: none;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 0.625rem 1rem 0.625rem 2.5rem;
+          border: 1px solid #d1d5db;
+          border-radius: 0.5rem;
+          outline: none;
+          transition: all 0.2s ease;
+          font-size: 1rem;
+        }
+
+        .search-input:focus {
+          border-color: #10b981;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .search-input::placeholder {
+          color: #9ca3af;
+        }
+
+        /* Categories Sidebar */
         .categories-sidebar {
           display: none;
           width: 256px;
@@ -480,6 +548,7 @@ const ProductList = () => {
           }
         }
 
+        /* Animations */
         @keyframes fadeInUp {
           from {
             opacity: 0;

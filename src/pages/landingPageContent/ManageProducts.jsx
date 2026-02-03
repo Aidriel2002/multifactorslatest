@@ -24,12 +24,21 @@ const ManageProduct = () => {
     loadProducts();
   }, []);
 
+  // Set up real-time subscription
   useEffect(() => {
     const subscription = productAPI.subscribeToChanges((payload) => {
+      console.log('Real-time update:', payload);
+      
       if (payload.eventType === 'INSERT') {
         setProducts(prev => {
+          // Check if product already exists to prevent duplicates
           const exists = prev.some(p => p.id === payload.new.id);
-          return exists ? prev : [payload.new, ...prev];
+          if (exists) {
+            console.log('Product already exists, skipping insert');
+            return prev;
+          }
+          // Add new product at the beginning
+          return [payload.new, ...prev];
         });
       } else if (payload.eventType === 'UPDATE') {
         setProducts(prev => prev.map(p => 
@@ -61,11 +70,13 @@ const ManageProduct = () => {
   const openModal = (product = null) => {
     setEditingProduct(product);
     setIsModalOpen(true);
+    setErrorMessage('');
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
+    setSaving(false);
   };
 
   const showSuccess = (message) => {
@@ -76,6 +87,7 @@ const ManageProduct = () => {
   const handleSubmit = async (productData) => {
     try {
       setSaving(true);
+      setErrorMessage('');
 
       if (editingProduct) {
         await productAPI.update(editingProduct.id, productData);
@@ -88,7 +100,9 @@ const ManageProduct = () => {
       closeModal();
     } catch (err) {
       console.error('Error saving product:', err);
-      setErrorMessage('Failed to save product. Please try again.');
+      const errorMsg = err.message || 'Failed to save product. Please try again.';
+      setErrorMessage(errorMsg);
+      throw err; // Re-throw to let modal handle it
     } finally {
       setSaving(false);
     }

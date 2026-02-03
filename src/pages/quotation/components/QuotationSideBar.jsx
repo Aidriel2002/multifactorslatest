@@ -4,7 +4,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 
 const quotationMenuItems = [
   { label: 'Dashboard', path: '/quotation', icon: '📊' },
-  { label: 'Quotation', path: '/managequotation', icon: '📝' },
+  { label: 'Quotation', path: '/quotationlist', icon: '📝' },
   { label: 'Project', path: '/project', icon: '📁' },
   { label: 'Purchase Order', path: '/purchase-order', icon: '📋' },
 ]

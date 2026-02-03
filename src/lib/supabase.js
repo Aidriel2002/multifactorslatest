@@ -35,7 +35,6 @@ export const isAdmin = async () => {
 }
 
 export const productAPI = {
-  // Get all products
   async getAll() {
     const { data, error } = await supabase
       .from('products')
@@ -46,7 +45,6 @@ export const productAPI = {
     return data;
   },
 
-  // Get single product by id
   async getById(id) {
     const { data, error } = await supabase
       .from('products')
@@ -58,7 +56,6 @@ export const productAPI = {
     return data;
   },
 
-  // Create new product
   async create(product) {
     const { data, error } = await supabase
       .from('products')
@@ -70,7 +67,6 @@ export const productAPI = {
     return data;
   },
 
-  // Update product
   async update(id, updates) {
     const { data, error } = await supabase
       .from('products')
@@ -83,7 +79,6 @@ export const productAPI = {
     return data;
   },
 
-  // Delete product
   async delete(id) {
     const { error } = await supabase
       .from('products')
@@ -94,13 +89,135 @@ export const productAPI = {
     return true;
   },
 
-  // Subscribe to real-time changes
   subscribeToChanges(callback) {
     const subscription = supabase
       .channel('products-changes')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return subscription;
+  }
+};
+
+
+export const quotationAPI = {
+  async getAll(type = null) {
+    let query = supabase
+      .from('quotations')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (type) {
+      query = query.eq('quotation_type', type);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
+
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('quotations')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getItems(quotationId) {
+    const { data, error } = await supabase
+      .from('quotation_items')
+      .select('*')
+      .eq('quotation_id', quotationId)
+      .order('sort_order', { ascending: true });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async create(quotation, items) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data: newQuotation, error: quotationError } = await supabase
+      .from('quotations')
+      .insert([{ ...quotation, created_by: user?.id }])
+      .select()
+      .single();
+
+    if (quotationError) throw quotationError;
+
+    if (items && items.length > 0) {
+      const itemsToInsert = items.map((item, index) => ({
+        quotation_id: newQuotation.id,
+        ...item,
+        sort_order: index
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('quotation_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+    }
+
+    return newQuotation;
+  },
+
+  async update(id, quotation, items) {
+    const { error: quotationError } = await supabase
+      .from('quotations')
+      .update(quotation)
+      .eq('id', id);
+
+    if (quotationError) throw quotationError;
+
+    if (items) {
+      await supabase
+        .from('quotation_items')
+        .delete()
+        .eq('quotation_id', id);
+
+      const itemsToInsert = items.map((item, index) => ({
+        quotation_id: id,
+        ...item,
+        sort_order: index
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('quotation_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+    }
+
+    return true;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('quotations')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  subscribeToChanges(callback) {
+    const subscription = supabase
+      .channel('quotations-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'quotations' },
         (payload) => {
           callback(payload);
         }

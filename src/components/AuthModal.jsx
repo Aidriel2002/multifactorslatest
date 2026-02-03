@@ -30,7 +30,6 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
   useEffect(() => {
     if (!isOpen) {
-      // Reset form when modal closes
       setEmail('')
       setPassword('')
       setConfirmPassword('')
@@ -46,7 +45,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         try {
           window.grecaptcha.reset(recaptchaWidgetId.current)
         } catch  {
-          // Widget may already be destroyed
+          // walay ma salo
         }
       }
     }

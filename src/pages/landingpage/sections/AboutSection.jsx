@@ -30,13 +30,8 @@ const AboutSection = () => {
   return (
     <section id="about"
       ref={sectionRef}
-      className="relative min-h-screen py-24 px-6 overflow-hidden"
+      className="relative min-h-screen py-24 px-6 overflow-hidden bg-gray-50" 
     >
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob top-0 -left-4"></div>
-        <div className="absolute w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 top-0 -right-4"></div>
-        <div className="absolute w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000 bottom-0 left-1/2"></div>
-      </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         <div className={`text-center mb-20 transition-all duration-1000 transform ${

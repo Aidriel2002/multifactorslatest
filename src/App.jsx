@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthProvider'
 import { ProtectedRoute, AdminRoute, EmployeeRoute } from './components/ProtectedRoute'
 
@@ -20,6 +20,7 @@ import AboutSection from './pages/landingpage/sections/AboutSection'
 import ProductSection from './pages/landingpage/sections/ProductSection'
 import ProjectSection from './pages/landingpage/sections/ProjectSection'
 import ServicesSection from './pages/landingpage/sections/ServicesSection'
+import ChatButton from './pages/landingpage/components/ChatButton'
 
 import ProductList from './pages/landingpage/list/ProductList'
 
@@ -36,17 +37,18 @@ import PaymentHistory from './pages/billings/PaymentHistory'
 
 import QuotationDashboard from './pages/quotation/QuotationDashboard'
 import Project from './pages/quotation/pages/Project'
-import Quotation from './pages/quotation/pages/Quotation'
 import PurchaseOrder from './pages/quotation/pages/PurchaseOrder'
+import QuotationList from './pages/quotation/pages/QuotationList';
+import CreateQuotation1 from './pages/quotation/pages/CreateQuotation1';
+import ViewQuotation from './pages/quotation/pages/ViewQuotation';
+import EditQuotation from './pages/quotation/pages/EditQuotation';
+import EditPrintableTemplate from './pages/quotation/pages/EditPrintableTemplate'
 
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
 
 import ManageProduct from './pages/landingPageContent/ManageProducts'
 
 import AuthModal from './components/AuthModal'
-
-
-
 
 const LandingPage = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -79,9 +81,6 @@ const LandingPage = () => {
       <ProductSection />
       <ServicesSection />
       <Footer />
-
-     
-      
       <AuthModal 
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -89,6 +88,16 @@ const LandingPage = () => {
       />
     </div>
   )
+}
+
+const ConditionalChatButton = () => {
+  const location = useLocation()
+  
+  const publicRoutes = ['/', '/productlist', '/pending-approval', '/account-rejected']
+  
+  const isPublicRoute = publicRoutes.includes(location.pathname)
+  
+  return isPublicRoute ? <ChatButton /> : null
 }
 
 function App() {
@@ -135,10 +144,14 @@ function App() {
           <Route path="/escalation" element={<ProtectedRoute><EscalationReport /></ProtectedRoute>} />
 
           <Route path="/quotation" element={<ProtectedRoute><QuotationDashboard /></ProtectedRoute>} />
-          <Route path="/managequotation" element={<ProtectedRoute><Quotation /></ProtectedRoute>} />
           <Route path="/project" element={<ProtectedRoute><Project /></ProtectedRoute>} />
           <Route path="/purchase-order" element={<ProtectedRoute><PurchaseOrder /></ProtectedRoute>} />
-          
+          <Route path="/quotationlist" element={<ProtectedRoute><QuotationList /></ProtectedRoute>} />
+          <Route path="/editprintable" element={<ProtectedRoute><EditPrintableTemplate /></ProtectedRoute>} />
+          <Route path="/quotation/create/quotation1" element={<ProtectedRoute><CreateQuotation1 /></ProtectedRoute>} />
+          <Route path="/quotation/view/:id" element={<ProtectedRoute><ViewQuotation /></ProtectedRoute>} />
+          <Route path="/quotation/edit/:id" element={<ProtectedRoute><EditQuotation /></ProtectedRoute>} />
+                    
           <Route path="/manageproduct" element={<ProtectedRoute><ManageProduct /></ProtectedRoute>} />
 
           <Route path="/settings" element={<ProtectedRoute><AccountSettings /></ProtectedRoute>} />
@@ -146,6 +159,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
+        
+        <ConditionalChatButton />
       </AuthProvider>
     </BrowserRouter>
   )
