@@ -48,7 +48,7 @@ const slides = [
     content: {
       brand: "UNV",
       title: "Professional CCTV Systems",
-      subtitle: "Enterprise-Grade Surveillance Solutions",
+      subtitle: "Your security isn't our experiment.",
       description: "Industry-leading UNV cameras with advanced AI analytics, crystal-clear 4K resolution, and intelligent video management",
       features: [],
       specs: []
@@ -60,8 +60,8 @@ const slides = [
     type: 'smart-door-lock',
     content: {
       title: "Smart Door Lock",
-      subtitle: "Keyless Entry, Maximum Security",
-      tagline: "Control Access From Anywhere",
+      subtitle: "Confidence built into every lock and lens.",
+      tagline: "If it's not good enough for us, it's not for sale.",
       description: "Advanced biometric door locks with fingerprint, PIN, card, and mobile app access. Never worry about lost keys again.",
       benefits: [],
       features: []
@@ -73,7 +73,7 @@ const slides = [
     type: 'networking',
     content: {
       title: "Networking Solutions",
-      subtitle: "Fast, Reliable, Secure Infrastructure",
+      subtitle: "Designed for uptime.",
       description: "Complete networking solutions including routers, switches, access points, and structured cabling for businesses of all sizes",
       services: [],
       stats: []
@@ -106,8 +106,17 @@ const HeroSection = () => {
   }, []);
 
   useEffect(() => {
-    setShowBrand(false); setShowTitle(false); setShowDesc(false);
-    setShowCards(false); setShowSpecs(false);
+    // Reset all animation states
+    const resetAnimations = () => {
+      setShowBrand(false);
+      setShowTitle(false);
+      setShowDesc(false);
+      setShowCards(false);
+      setShowSpecs(false);
+    };
+    
+    resetAnimations();
+    
     const t1 = setTimeout(() => setShowBrand(true), 150);
     const t2 = setTimeout(() => setShowTitle(true), 350);
     const t3 = setTimeout(() => setShowDesc(true),  550);
@@ -120,7 +129,7 @@ const HeroSection = () => {
     if (!isAutoPlaying) return;
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % slides.length);
-    }, 8000);
+    }, 7000);
     return () => clearInterval(interval);
   }, [isAutoPlaying]);
 
@@ -132,8 +141,6 @@ const HeroSection = () => {
   const goToSlide = (i)  => { setCurrentSlide(i);                                            pauseAutoplay(); };
   const nextSlide = ()    => { setCurrentSlide(p => (p + 1) % slides.length);                 pauseAutoplay(); };
   const prevSlide = ()    => { setCurrentSlide(p => (p - 1 + slides.length) % slides.length); pauseAutoplay(); };
-
-  const slide = slides[currentSlide];
 
   const fadeIn = (flag, extraDelay = 0) => ({
     opacity:   flag ? 1 : 0,

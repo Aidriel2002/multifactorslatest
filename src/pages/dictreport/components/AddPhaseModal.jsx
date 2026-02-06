@@ -1,6 +1,10 @@
 import { useState } from 'react'
+import { usePageSecurity } from '../../../hooks/usePageSecurity'
+import { canAccessReports } from '../../../utils/rbac'
 
 const AddPhaseModal = ({ isOpen, onClose, onSubmit }) => {
+  const { loading: securityLoading } = usePageSecurity(canAccessReports)
+
   const [formData, setFormData] = useState({
     name: '',
     sheets_link: '',
@@ -53,6 +57,14 @@ const AddPhaseModal = ({ isOpen, onClose, onSubmit }) => {
   }
 
   if (!isOpen) return null
+  
+  if (securityLoading) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  )
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

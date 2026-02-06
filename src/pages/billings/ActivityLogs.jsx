@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../utils/rbac'
 import BillingsSidebar from './components/BillingSidebar'
 import BillingNavbar from './components/BillingNavbar'
 
 const ActivityLogs = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessBilling)
+
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
 
   useEffect(() => {
+    if (securityLoading) return
     const loadLogs = async () => {
       setLoading(true)
       let query = supabase
@@ -44,7 +49,7 @@ const ActivityLogs = () => {
     return () => {
       subscription.unsubscribe()
     }
-  }, [filter])
+  }, [filter, securityLoading])
 
   const getLogIcon = (type) => {
     switch (type) {
@@ -101,7 +106,13 @@ const ActivityLogs = () => {
   })
 }
 
-
+if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-purple-600 rounded-full" />
+    </div>
+  )
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

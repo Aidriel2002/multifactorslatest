@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../utils/rbac'
 import BillingsSidebar from './components/BillingSidebar'
 import BillingNavbar from './components/BillingNavbar'
 import ProviderModal from './components/ProviderModal'
@@ -7,6 +9,9 @@ import ProjectModal from './components/ProjectModal'
 import { ChevronDown, ChevronRight, FolderOpen, Folder } from 'lucide-react'
 
 const Providers = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessBilling)
+
+
   const [providers, setProviders] = useState([])
   const [projects, setProjects] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -23,6 +28,8 @@ const Providers = () => {
   })
 
   useEffect(() => {
+     if (securityLoading) return
+
     const fetchData = async () => {
       setLoading(true)
       
@@ -53,7 +60,7 @@ const Providers = () => {
     }
 
     fetchData()
-  }, [])
+  }, [securityLoading])
 
   useEffect(() => {
     const initialExpanded = {}
@@ -298,6 +305,14 @@ const Providers = () => {
       refreshData()
     }
   }
+}
+
+if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-purple-600 rounded-full" />
+    </div>
+  )
 }
 
   return (

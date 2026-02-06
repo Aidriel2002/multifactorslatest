@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import AdminSidebar from "../../components/AdminSidebar";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import AddPhaseModal from "./components/AddPhaseModal";
 import AddDowntimeModal from "./components/AddDowntimeModal";
 import { fetchSitesFromGoogleSheets } from "../../lib/googleSheetsAPI";
+import { usePageSecurity } from "../../hooks/usePageSecurity";
+import { canAccessReports } from "../../utils/rbac";
 
 const ReportDashboard = () => {
-  const { profile } = useAuth();
+  const { profile, securityLoading } = usePageSecurity(canAccessReports);
 
   const [selectedPhase, setSelectedPhase] = useState("");
   const [phases, setPhases] = useState([]);
@@ -386,6 +387,14 @@ const handleCreateBulkReports = () => {
   setIsDowntimeModalOpen(true);
   setSelectedSheet(selectedRows);
 };
+
+ if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

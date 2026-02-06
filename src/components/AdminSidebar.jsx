@@ -12,6 +12,7 @@ const adminMenuItems = [
   { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
   { label: 'Billings', path: '/billings', icon: '💰' },
   { label: 'Quotation', path: '/quotation', icon: '📝' },
+  { label: 'Tax Calculator', path: 'https://multifactorstax.netlify.app', icon: '📱', external: true },
   
 ]
 
@@ -40,6 +41,17 @@ const AdminSidebar = () => {
                 {item.label}
               </p>
             </div>
+          ) : item.external ? (
+            <a
+              key={index}
+              href={item.path}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center px-4 py-3 mx-2 rounded-lg transition-colors text-gray-300 hover:bg-green-800 hover:text-white"
+            >
+              <span className="text-xl mr-3">{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </a>
           ) : (
             <Link
               key={index}

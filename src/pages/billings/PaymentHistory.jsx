@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../utils/rbac'
 import BillingsSidebar from './components/BillingSidebar'
 import BillingNavbar from './components/BillingNavbar'
 
 const PaymentHistory = () => {
+   const { loading: securityLoading } = usePageSecurity(canAccessBilling)
+
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
+    if (securityLoading) return
+
     const fetchPayments = async () => {
       setLoading(true)
       let query = supabase
@@ -38,7 +44,7 @@ const PaymentHistory = () => {
     }
 
     fetchPayments()
-  }, [statusFilter])
+  }, [statusFilter, securityLoading])
 
   const filteredPayments = payments.filter(payment =>
     payment.providers?.site_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,6 +80,14 @@ const PaymentHistory = () => {
       day: 'numeric'
     })
   }
+
+  if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-purple-600 rounded-full" />
+    </div>
+  )
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

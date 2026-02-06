@@ -1,11 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect} from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessContacts } from '../../utils/rbac'
 import AdminSidebar from '../../components/AdminSidebar'
 import EmployeeSidebar from '../../components/EmployeeSidebar'
 import AddContactModal from './components/AddContact'
 
 const ContactsDashboard = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessContacts)
+
   const { profile } = useAuth()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -20,22 +24,10 @@ const ContactsDashboard = () => {
 
   const Sidebar = profile?.role === 'admin' ? AdminSidebar : EmployeeSidebar
 
-  const fetchContacts = useCallback(async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching contacts:', error)
-    } else {
-      setContacts(data || [])
-    }
-    setLoading(false)
-  }, [])
+ 
 
   useEffect(() => {
+
     const fetchContacts = async () => {
       setLoading(true)
       const { data, error } = await supabase
@@ -53,6 +45,21 @@ const ContactsDashboard = () => {
 
     fetchContacts()
   }, [])
+
+  const fetchContacts = async () => {
+  setLoading(true)
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching contacts:', error)
+  } else {
+    setContacts(data || [])
+  }
+  setLoading(false)
+}
 
   const handleAddContact = async (contactData) => {
     if (editingContact) {
@@ -128,6 +135,14 @@ const ContactsDashboard = () => {
     internetProviders: contacts.filter(c => c.contact_type === 'Internet Provider').length,
     provinces: provinces.length
   }
+
+  if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  )
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
+import { usePageSecurity } from '../../../hooks/usePageSecurity'
+import { canAccessQuotations } from '../../../utils/rbac'
 
 const quotationMenuItems = [
   { label: 'Dashboard', path: '/quotation', icon: '📊' },
@@ -12,7 +14,8 @@ const quotationMenuItems = [
 const QuotationSideBar = () => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { profile, signOut } = useAuth()
+  const { profile, securityLoading } = usePageSecurity(canAccessQuotations)
+  const { signOut } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const handleSignOut = async () => {
@@ -21,6 +24,14 @@ const QuotationSideBar = () => {
   }
 
   const isActive = (path) => location.pathname === path
+
+   if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  );
+}
 
   return (
     <aside className="billings-sidebar fixed left-0 top-0 z-50">

@@ -1,6 +1,10 @@
 import { useState } from 'react'
+import { usePageSecurity } from '../../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../../utils/rbac'
 
 const ProjectModal = ({ isOpen, onClose, onSubmit, projects = [], onDelete, providers = [] }) => {
+  const { loading: securityLoading } = usePageSecurity(canAccessBilling)
+
   const [projectName, setProjectName] = useState('')
   const [deleteError, setDeleteError] = useState('')
 
@@ -37,6 +41,13 @@ const ProjectModal = ({ isOpen, onClose, onSubmit, projects = [], onDelete, prov
   }
 
   if (!isOpen) return null
+  if (securityLoading) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  )
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

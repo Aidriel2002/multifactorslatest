@@ -4,8 +4,12 @@ import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
 import { PrinterIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { usePageSecurity } from '../../../hooks/usePageSecurity';
+import { canAccessQuotations } from '../../../utils/rbac';
 
 function ViewQuotation() {
+  const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
+
   const { id } = useParams();
   const navigate = useNavigate();
   const [quotation, setQuotation] = useState(null);
@@ -72,16 +76,19 @@ function ViewQuotation() {
 
   const hasApprovedBy = quotation?.approved_by || quotation?.approved_by_signature;
 
-  if (loading) {
-    return (
-      <div className="flex h-screen bg-gray-50">
-        <QuotationSideBar />
-        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
-          <div className="text-gray-500">Loading...</div>
+  if (loading || securityLoading) {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <QuotationSideBar />
+      <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (!quotation) {
     return (
@@ -268,7 +275,7 @@ function ViewQuotation() {
               {hasApprovedBy && (
                 <div className="text-center">
                   <p className="text-left text-sm text-black">Approved By</p>
-                  <div className="mb-4 h-20 flex items-center justify-center">
+                  <div className="-mb-6 h-20 flex items-center justify-center">
                     {quotation.approved_by_signature && (
                       <img 
                         src={quotation.approved_by_signature} 
@@ -278,8 +285,11 @@ function ViewQuotation() {
                     )}
                   </div>
                   <div style={{ borderBottom: '1pt solid black', paddingBottom: '0.25rem' }}>
-                    <p className="font-bold text-black">{quotation.approved_by}</p>
+                    <p className="text-black">{quotation.approved_by || '_________________'}</p>
                   </div>
+                  {quotation.approved_by_designation && (
+                    <p className="text-sm text-black mt-1">{quotation.approved_by_designation}</p>
+                  )}
                 </div>
               )}
             </div>

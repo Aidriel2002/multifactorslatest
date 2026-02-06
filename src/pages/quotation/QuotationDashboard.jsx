@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import QuotationSideBar from './components/QuotationSideBar';
 import QuotationNavbar from './components/QuotationNavbar';
 import { supabase } from '../../lib/supabase';
+import { usePageSecurity } from '../../hooks/usePageSecurity';
+import { canAccessQuotations } from '../../utils/rbac';
 import {
   DocumentTextIcon,
   ShoppingCartIcon,
@@ -12,6 +14,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 function QuotationDashboard() {
+  const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
+
   const [stats, setStats] = useState({
     quotations: { total: 0, change: 0 },
     purchaseOrders: { total: 0, change: 0 },
@@ -157,6 +161,20 @@ function QuotationDashboard() {
     { title: 'New Purchase Order', path: '/quotation/purchase-orders/create', color: 'bg-gradient-to-r from-purple-500 to-purple-600' },
     { title: 'New Project', path: '/quotation/projects/create', color: 'bg-gradient-to-r from-emerald-500 to-emerald-600' }
   ];
+  
+  if (securityLoading) {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <QuotationSideBar />
+      <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-50">

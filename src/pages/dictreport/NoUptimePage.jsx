@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
+import { usePageSecurity } from "../../hooks/usePageSecurity";
+import { canAccessReports } from "../../utils/rbac";
 import AdminSidebar from "../../components/AdminSidebar";
 import EmployeeSidebar from "../../components/EmployeeSidebar";
 import UpdateUptimeModal from "./components/UpdateUptimeModal";
 
 const NoUptime = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessReports);
+
   const { profile } = useAuth();
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState("");
@@ -85,6 +89,8 @@ const NoUptime = () => {
   };
 
   useEffect(() => {
+    if (securityLoading) return;
+
     const fetchPhases = async () => {
       const { data, error } = await supabase
         .from("phases")
@@ -103,7 +109,7 @@ const NoUptime = () => {
     };
 
     fetchPhases();
-  }, []);
+  }, [securityLoading]);
 
   useEffect(() => {
     if (!selectedPhase) return;
@@ -346,6 +352,14 @@ const NoUptime = () => {
       _original: [record]
     };
   };
+
+  if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

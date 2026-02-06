@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { usePageSecurity } from '../../../hooks/usePageSecurity';
+import { canAccessReports } from '../../../utils/rbac';
 
 const UpdateUptimeModal = ({ isOpen, onClose, onSubmit, record }) => {
+  const { loading: securityLoading } = usePageSecurity(canAccessReports);
+
   const [uptime, setUptime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +55,14 @@ const UpdateUptimeModal = ({ isOpen, onClose, onSubmit, record }) => {
   };
 
   if (!isOpen) return null;
+
+  if (securityLoading) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+    </div>
+  );
+}
 
   const duration = calculateDuration();
 

@@ -24,11 +24,21 @@ export const AuthProvider = ({ children }) => {
       } else {
         setProfile(null)
         setLoading(false)
+        clearAPICache()
       }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  const clearAPICache = async () => {
+    try {
+      const { clearCache } = await import('../utils/apiValidation')
+      clearCache()
+    } catch (error) {
+      console.error('Error clearing cache:', error)
+    }
+  }
 
   const loadProfile = async () => {
     try {
@@ -52,15 +62,24 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (!error) await loadProfile()
+    if (!error) {
+      await clearAPICache()
+      await loadProfile()
+    }
     return { data, error }
   }
 
   const signOut = async () => {
+    await clearAPICache()
     const { error } = await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
     return { error }
+  }
+
+  const refreshProfile = async () => {
+    await clearAPICache()
+    await loadProfile()
   }
 
   const value = {
@@ -74,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin: profile?.role === 'admin' && profile?.status === 'approved',
     isPending: profile?.status === 'pending',
     isRejected: profile?.status === 'rejected',
-    refreshProfile: loadProfile
+    refreshProfile
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

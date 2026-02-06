@@ -4,8 +4,12 @@ import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
 import { PlusIcon, TrashIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { usePageSecurity } from '../../../hooks/usePageSecurity';
+import { canAccessQuotations } from '../../../utils/rbac';
 
 function EditQuotation() {
+  const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
+
   const { id } = useParams();
   const navigate = useNavigate();
   const preparedSigRef = useRef(null);
@@ -208,16 +212,19 @@ function EditQuotation() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen bg-gray-50">
-        <QuotationSideBar />
-        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
-          <div className="text-gray-500">Loading...</div>
+  if (loading || securityLoading) {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <QuotationSideBar />
+      <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-50">

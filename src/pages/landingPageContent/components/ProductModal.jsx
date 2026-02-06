@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { canManageProducts } from '../../../utils/rbac'
+import { useAuth } from '../../../contexts/AuthContext'
 
 const ProductModal = ({ 
   isOpen, 
@@ -20,6 +22,8 @@ const ProductModal = ({
     display_on_homepage: true,
     display_order: ''
   });
+  const { profile } = useAuth()
+  const canManage = canManageProducts(profile)
   const [imagePreview, setImagePreview] = useState('');
   const [error, setError] = useState(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -368,6 +372,9 @@ const ProductModal = ({
   const uniqueCategories = getUniqueCategories();
 
   if (!isOpen) return null;
+  if (!canManage) {
+  return null
+}
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

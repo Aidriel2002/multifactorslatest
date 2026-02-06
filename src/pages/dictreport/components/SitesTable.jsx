@@ -1,4 +1,19 @@
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessReports } from '../../utils/rbac'
+
 const SitesTable = ({ sites, loading, selectedPhase, onAddReport }) => {
+  const { loading: securityLoading } = usePageSecurity(canAccessReports)
+
+  if (securityLoading) {
+    return (
+      <div className="bg-white shadow rounded-lg">
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    )
+  }
+  
   if (!selectedPhase) {
     return (
       <div className="bg-white shadow rounded-lg">

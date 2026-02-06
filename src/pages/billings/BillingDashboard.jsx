@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../utils/rbac'
 import BillingsSidebar from './components/BillingSidebar'
 import BillingNavbar from './components/BillingNavbar'
 import { useNavigate } from 'react-router-dom'
 
 
 const BillingDashboard = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessBilling)
   const navigate = useNavigate()
   const [providers, setProviders] = useState([])
   const [recentPayments, setRecentPayments] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (securityLoading) return
     let isMounted = true
 
     const fetchData = async () => {
@@ -53,7 +57,7 @@ const BillingDashboard = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [securityLoading])
 
   const getDueDate = (dueDay, lastPaidMonth) => {
     const today = new Date()
@@ -100,6 +104,15 @@ const BillingDashboard = () => {
       return status === 'due-soon' || status === 'overdue'
     })
     .slice(0, 5)
+    
+    if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-purple-600 rounded-full" />
+    </div>
+  )
+}
+
 
   return (
     <div className="flex h-screen bg-gray-100">

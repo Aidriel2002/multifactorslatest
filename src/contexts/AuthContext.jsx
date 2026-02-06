@@ -9,3 +9,30 @@ export const useAuth = () => {
   }
   return context
 }
+
+/**
+ * Role-based permission hooks
+ */
+export const useIsAdmin = () => {
+  const { profile } = useAuth()
+  return profile?.role === 'admin' && profile?.status === 'approved'
+}
+
+export const useIsApproved = () => {
+  const { profile } = useAuth()
+  return profile?.status === 'approved'
+}
+
+export const useHasRole = (allowedRoles) => {
+  const { profile } = useAuth()
+  if (!profile || profile.status !== 'approved') return false
+  return allowedRoles.includes(profile.role)
+}
+
+export const useCanDelete = () => {
+  return useIsAdmin()
+}
+
+export const useCanEdit = () => {
+  return useIsApproved()
+}

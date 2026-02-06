@@ -1,4 +1,19 @@
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessReports } from '../../utils/rbac'
+
 const PhaseSelector = ({ phases, selectedPhase, onPhaseChange, onAddPhase, onDeletePhase }) => {
+   const { loading: securityLoading } = usePageSecurity(canAccessReports)
+
+    if (securityLoading) {
+    return (
+      <div className="mb-6 bg-white shadow rounded-lg p-4">
+        <div className="flex items-center justify-center py-4">
+          <div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mb-6 bg-white shadow rounded-lg p-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">

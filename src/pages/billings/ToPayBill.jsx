@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canAccessBilling } from '../../utils/rbac'
 import BillingsSidebar from './components/BillingSidebar'
 import BillingNavbar from './components/BillingNavbar'
 import PaymentModal from './components/PaymentModal'
 
 const ToPayBill = () => {
+  const { loading: securityLoading } = usePageSecurity(canAccessBilling)
   const { profile } = useAuth()
 
   const [providers, setProviders] = useState([])
@@ -18,6 +21,8 @@ const ToPayBill = () => {
   })
 
   useEffect(() => {
+    if (securityLoading) return
+
     let isMounted = true
 
     const fetchProviders = async () => {
@@ -44,7 +49,7 @@ const ToPayBill = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [securityLoading])
 
   const getDueDate = (dueDay, lastPaidMonth) => {
     const today = new Date()
@@ -190,6 +195,8 @@ const ToPayBill = () => {
   const renderBillSection = (title, bills, bgColor, icon) => {
     if (bills.length === 0) return null
 
+    
+
     return (
       <div className="mb-8">
         <div className={`${bgColor} px-4 py-3 rounded-t-lg flex items-center gap-2`}>
@@ -265,7 +272,14 @@ const ToPayBill = () => {
       </div>
     )
   }
-
+  
+if (securityLoading) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="animate-spin h-12 w-12 border-b-2 border-purple-600 rounded-full" />
+    </div>
+  )
+}
   return (
     <div className="flex h-screen bg-gray-100">
       <BillingsSidebar />

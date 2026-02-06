@@ -64,22 +64,17 @@ const ChatButton = () => {
     {
       id: 2,
       question: "Where is your location?",
-      answer: "We are located at No.005, Juan C. Legaspi St., Ubaldo Laya, Iligan City, Lanao Del Norte."
+      answer: "We are located at No.005, Juan C. Legaspi St., Ubaldo Laya, Iligan City, Lanao Del Norte, Philippines."
     },
     {
       id: 3,
-      question: "Do you offer wholesale or retail?",
-      answer: "We offer both wholesale and retail services! For wholesale inquiries, minimum order quantities apply. Please contact our sales team for wholesale pricing and terms."
-    },
-    {
-      id: 4,
       question: "What areas do you serve for projects?",
       answer: "We serve the entire Region 10 area and surrounding regions within a 50-mile radius. For projects outside this area, please contact us to discuss possibilities and additional arrangements."
     },
     {
-      id: 5,
+      id: 4,
       question: "How can I request a quote?",
-      answer: "You can request a quote by filling out our online form, calling us directly, or sending us an email with your project details. We typically respond within 24 hours on business days."
+      answer: "You can request a quote by calling us directly or emailing your project details. We typically respond within a minute during business hours."
     }
   ];
 

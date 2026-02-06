@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { usePageSecurity } from '../../hooks/usePageSecurity'
+import { canApproveUsers } from '../../utils/rbac'
 import { supabase } from '../../lib/supabase'
 import AdminSidebar from '../../components/AdminSidebar'
 
 const ApprovalPage = () => {
-  const { profile } = useAuth()
-
+  const { profile, loading: securityLoading } = usePageSecurity(canApproveUsers)
+  
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -28,6 +29,9 @@ const ApprovalPage = () => {
   }
 
   useEffect(() => {
+    // Don't fetch data until security check is complete
+    if (securityLoading) return
+    
     let mounted = true
 
     const loadUsers = async () => {
@@ -41,7 +45,7 @@ const ApprovalPage = () => {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [securityLoading])
 
   const updateUserStatus = async (userId, status) => {
     const { error } = await supabase
@@ -87,6 +91,15 @@ const ApprovalPage = () => {
     pending: users.filter(u => u.status === 'pending').length,
     approved: users.filter(u => u.status === 'approved').length,
     rejected: users.filter(u => u.status === 'rejected').length,
+  }
+
+  // Show loading state while security check is in progress
+  if (securityLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+      </div>
+    )
   }
 
   return (

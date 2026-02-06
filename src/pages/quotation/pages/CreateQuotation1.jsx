@@ -4,8 +4,12 @@ import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
 import { PlusIcon, TrashIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { usePageSecurity } from '../../../hooks/usePageSecurity';
+import { canAccessQuotations } from '../../../utils/rbac';
 
 function CreateQuotation1() {
+  const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
+
   const navigate = useNavigate();
   const preparedSigRef = useRef(null);
   const approvedSigRef = useRef(null);
@@ -20,6 +24,7 @@ function CreateQuotation1() {
     preparedBy: '',
     preparedByDesignation: '',
     approvedBy: '',
+    approvedByDesignation: '',
     preparedBySignature: null,
     approvedBySignature: null
   });
@@ -122,6 +127,7 @@ function CreateQuotation1() {
           prepared_by: formData.preparedBy,
           prepared_by_designation: formData.preparedByDesignation,
           approved_by: formData.approvedBy || null,
+          approved_by_designation: formData.approvedByDesignation || null,
           prepared_by_signature: formData.preparedBySignature,
           approved_by_signature: formData.approvedBySignature || null,
           created_by: user?.id
@@ -156,6 +162,20 @@ function CreateQuotation1() {
       setLoading(false);
     }
   };
+
+  if (securityLoading) {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <QuotationSideBar />
+      <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -434,6 +454,17 @@ function CreateQuotation1() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
                     placeholder="Enter name"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Designation <span className="text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="approvedByDesignation"
+                    value={formData.approvedByDesignation}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                    placeholder="Enter designation"
                   />
                   <div>
                     <input

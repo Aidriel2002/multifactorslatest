@@ -3,7 +3,8 @@ import { productAPI } from '../../lib/supabase';
 import ProductModal from './components/ProductModal';
 import AdminSidebar from '../../components/AdminSidebar';
 import EmployeeSidebar from '../../components/EmployeeSidebar';
-import { useAuth } from '../../contexts/AuthContext';
+import { usePageSecurity } from '../../hooks/usePageSecurity';
+import { canManageProducts } from '../../utils/rbac';
 
 const ManageProduct = () => {
   const [products, setProducts] = useState([]);
@@ -16,7 +17,7 @@ const ManageProduct = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const { profile } = useAuth();
+  const { profile, loading: securityLoading } = usePageSecurity(canManageProducts);
 
   const Sidebar = profile?.role === 'admin' ? AdminSidebar : EmployeeSidebar;
 
@@ -163,16 +164,17 @@ const ManageProduct = () => {
   const uniqueCategories = getUniqueCategories();
   const homepageCount = products.filter(p => p.display_on_homepage !== false).length;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading products...</p>
-        </div>
+
+  if (loading || securityLoading) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading products...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="flex h-screen bg-gray-100">

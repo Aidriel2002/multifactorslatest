@@ -4,8 +4,12 @@ import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
 import { EyeIcon, PencilIcon, TrashIcon, PlusIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { usePageSecurity } from '../../../hooks/usePageSecurity';
+import { canAccessQuotations } from '../../../utils/rbac';
 
 function QuotationList() {
+  const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
+
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -169,8 +173,11 @@ function QuotationList() {
 
           {/* Quotations Table */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading...</div>
+            {loading || securityLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading...</p>
+              </div>
             ) : quotations.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 No quotations found. Create your first quotation!

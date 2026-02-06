@@ -159,7 +159,7 @@ const ProductSection = () => {
         const textContent = node.textContent || '';
         if (currentLength + textContent.length > maxLength) {
           const remaining = maxLength - currentLength;
-          node.textContent = textContent.substring(0, remaining) + '...';
+          node.textContent = textContent.substring(0, remaining) + '... ';
           truncated = true;
         } else {
           currentLength += textContent.length;
@@ -271,24 +271,21 @@ const ProductSection = () => {
                         </div>
                       )}
                       {selectedProduct.description && (
-                        <div className="text-gray-600 text-base leading-relaxed">
+                        <div className="text-gray-700 text-base leading-relaxed">
                           {(() => {
                             const { html, needsReadMore } = truncateHTML(
                               selectedProduct.description,
-                              400
+                              250
                             );
                             return (
-                              <div>
-                                <div 
-                                  className="product-description"
-                                  dangerouslySetInnerHTML={{ __html: html }}
-                                />
+                              <div className="product-description">
+                                <span dangerouslySetInnerHTML={{ __html: html }} />
                                 {needsReadMore && (
                                   <button
                                     onClick={handleReadMore}
-                                    className="text-green-600 hover:text-green-700 font-medium mt-2 inline-flex items-center gap-1 transition-colors"
+                                    className="text-green-600 ml-1 inline-flex items-center gap-1 transition-colors"
                                   >
-                                    read more →
+                                    <span className='hover:text-green-700 hover:underline'>Learn more</span>  »
                                   </button>
                                 )}
                               </div>
@@ -407,29 +404,18 @@ const ProductSection = () => {
       <style jsx>{`
         .product-description {
           word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 
-        .product-description p {
-          margin-bottom: 0.5rem;
-        }
-
-        .product-description strong {
-          font-weight: 600;
-          color: #111827;
-        }
-
-        .product-description em {
-          font-style: italic;
-        }
-
-        .product-description u {
-          text-decoration: underline;
+        .product-description * {
+          margin: 0;
+          padding: 0;
         }
 
         .product-description ul,
         .product-description ol {
-          margin-left: 1.5rem;
-          margin-bottom: 0.5rem;
+          margin: 0.75em 0;
+          padding-left: 2em;
         }
 
         .product-description ul {
@@ -441,7 +427,49 @@ const ProductSection = () => {
         }
 
         .product-description li {
-          margin-bottom: 0.25rem;
+          margin: 0.5em 0;
+          padding-left: 0.25em;
+        }
+
+        .product-description p {
+          margin: 0.75em 0;
+        }
+
+        .product-description strong,
+        .product-description b {
+          font-weight: 700;
+        }
+
+        .product-description em,
+        .product-description i {
+          font-style: italic;
+        }
+
+        .product-description h1,
+        .product-description h2,
+        .product-description h3,
+        .product-description h4,
+        .product-description h5,
+        .product-description h6 {
+          font-weight: 700;
+          margin: 1em 0 0.5em 0;
+        }
+
+        .product-description a {
+          color: #059669;
+          text-decoration: underline;
+        }
+
+        .product-description a:hover {
+          color: #047857;
+        }
+
+        .product-description > *:first-child {
+          margin-top: 0;
+        }
+
+        .product-description > *:last-child {
+          margin-bottom: 0;
         }
       `}</style>
     </section>
