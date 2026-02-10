@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import AdminSidebar from "../../components/AdminSidebar";
-import EmployeeSidebar from "../../components/EmployeeSidebar";
 import AddPhaseModal from "./components/AddPhaseModal";
 import AddDowntimeModal from "./components/AddDowntimeModal";
 import { fetchSitesFromGoogleSheets } from "../../lib/googleSheetsAPI";
@@ -36,7 +35,6 @@ const ReportDashboard = () => {
     return null;
   });
 
-  const Sidebar = profile?.role === "admin" ? AdminSidebar : EmployeeSidebar;
 
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
   const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -398,7 +396,7 @@ const handleCreateBulkReports = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+      <AdminSidebar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
         <div className="bg-white shadow">

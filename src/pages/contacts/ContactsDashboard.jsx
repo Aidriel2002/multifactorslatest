@@ -4,7 +4,6 @@ import { supabase } from '../../lib/supabase'
 import { usePageSecurity } from '../../hooks/usePageSecurity'
 import { canAccessContacts } from '../../utils/rbac'
 import AdminSidebar from '../../components/AdminSidebar'
-import EmployeeSidebar from '../../components/EmployeeSidebar'
 import AddContactModal from './components/AddContact'
 
 const ContactsDashboard = () => {
@@ -22,12 +21,8 @@ const ContactsDashboard = () => {
   const [selectedProject, setSelectedProject] = useState('')
   const [selectedType, setSelectedType] = useState('')
 
-  const Sidebar = profile?.role === 'admin' ? AdminSidebar : EmployeeSidebar
-
- 
 
   useEffect(() => {
-
     const fetchContacts = async () => {
       setLoading(true)
       const { data, error } = await supabase
@@ -47,19 +42,19 @@ const ContactsDashboard = () => {
   }, [])
 
   const fetchContacts = async () => {
-  setLoading(true)
-  const { data, error } = await supabase
-    .from('contacts')
-    .select('*')
-    .order('created_at', { ascending: false })
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-  if (error) {
-    console.error('Error fetching contacts:', error)
-  } else {
-    setContacts(data || [])
+    if (error) {
+      console.error('Error fetching contacts:', error)
+    } else {
+      setContacts(data || [])
+    }
+    setLoading(false)
   }
-  setLoading(false)
-}
 
   const handleAddContact = async (contactData) => {
     if (editingContact) {
@@ -94,6 +89,11 @@ const ContactsDashboard = () => {
   }
 
   const handleDelete = async (id) => {
+    if (profile?.role !== 'admin') {
+      alert('Only administrators can delete contacts')
+      return
+    }
+
     if (window.confirm('Are you sure you want to delete this contact?')) {
       const { error } = await supabase
         .from('contacts')
@@ -137,16 +137,16 @@ const ContactsDashboard = () => {
   }
 
   if (securityLoading) {
-  return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
-      <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
-    </div>
-  )
-}
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+      <AdminSidebar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
         <div className="bg-white shadow">
@@ -407,12 +407,14 @@ const ContactsDashboard = () => {
                           >
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleDelete(contact.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
+                          {profile?.role === 'admin' && (
+                            <button
+                              onClick={() => handleDelete(contact.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

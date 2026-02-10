@@ -10,9 +10,6 @@ export const useAuth = () => {
   return context
 }
 
-/**
- * Role-based permission hooks
- */
 export const useIsAdmin = () => {
   const { profile } = useAuth()
   return profile?.role === 'admin' && profile?.status === 'approved'

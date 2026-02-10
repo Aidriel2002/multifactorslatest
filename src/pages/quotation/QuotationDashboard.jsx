@@ -30,7 +30,6 @@ function QuotationDashboard() {
 
   const fetchStats = async () => {
     try {
-      // Get current month stats
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -38,7 +37,6 @@ function QuotationDashboard() {
       const startOfLastMonth = new Date(startOfMonth);
       startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
 
-      // Quotations
       const { data: quotations } = await supabase
         .from('quotations')
         .select('id, grand_total, created_at');
@@ -50,7 +48,6 @@ function QuotationDashboard() {
         q => new Date(q.created_at) >= startOfLastMonth && new Date(q.created_at) < startOfMonth
       ) || [];
 
-      // Purchase Orders
       const { data: purchaseOrders } = await supabase
         .from('purchase_orders')
         .select('id, created_at');
@@ -62,7 +59,6 @@ function QuotationDashboard() {
         po => new Date(po.created_at) >= startOfLastMonth && new Date(po.created_at) < startOfMonth
       ) || [];
 
-      // Projects
       const { data: project } = await supabase
         .from('project')
         .select('id, created_at');
@@ -74,7 +70,6 @@ function QuotationDashboard() {
         p => new Date(p.created_at) >= startOfLastMonth && new Date(p.created_at) < startOfMonth
       ) || [];
 
-      // Revenue
       const currentRevenue = currentMonthQuotations.reduce((sum, q) => sum + parseFloat(q.grand_total || 0), 0);
       const lastRevenue = lastMonthQuotations.reduce((sum, q) => sum + parseFloat(q.grand_total || 0), 0);
 
@@ -156,10 +151,10 @@ function QuotationDashboard() {
   ];
 
   const quickActions = [
-    { title: 'New Quotation 1', path: '/quotation/create/quotation1', color: 'bg-gradient-to-r from-blue-500 to-blue-600' },
-    { title: 'New Quotation 2', path: '/quotation/create/quotation2', color: 'bg-gradient-to-r from-indigo-500 to-indigo-600' },
-    { title: 'New Purchase Order', path: '/quotation/purchase-orders/create', color: 'bg-gradient-to-r from-purple-500 to-purple-600' },
-    { title: 'New Project', path: '/quotation/projects/create', color: 'bg-gradient-to-r from-emerald-500 to-emerald-600' }
+    { title: 'Quotation 1', path: '/quotation/create/quotation1', color: 'bg-green-600 border-black 1pt' },
+    { title: 'Quotation 2', path: '/quotation/create/quotation2', color: 'bg-green-600' },
+    { title: 'Purchase Order', path: '/quotation/purchase-orders/create', color: 'bg-green-600' },
+    { title: 'Project', path: '/quotation/projects/create', color: 'bg-green-600' }
   ];
   
   if (securityLoading) {
@@ -186,7 +181,6 @@ function QuotationDashboard() {
         />
 
         <div className="p-8">
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {statCards.map((stat, index) => {
               const Icon = stat.icon;
@@ -220,7 +214,6 @@ function QuotationDashboard() {
             })}
           </div>
 
-          {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -239,7 +232,6 @@ function QuotationDashboard() {
             </div>
           </div>
 
-          {/* Recent Activity (placeholder for future enhancement) */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activity</h3>
             <p className="text-gray-500 text-sm">No recent activity to display</p>

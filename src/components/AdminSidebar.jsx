@@ -1,19 +1,75 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { getStaffPermissions, PERMISSION_TYPES } from '../utils/rbac'
 
-const adminMenuItems = [
-  { label: 'Dashboard', path: '/admin', icon: '📊' },
-  { label: 'User Approval', path: '/admin/approval', icon: '✅' },
-  { label: 'Contacts', path: '/contacts/dashboard', icon: '📇' },
-  { label: 'Expenses', path: '/expenses', icon: '💸' },
-  { label: 'Landing Page Setup', path: '/manageproduct', icon: '⚙️' },
+// Define menu items with their required permissions
+const menuItemsConfig = [
+  { 
+    label: 'Dashboard', 
+    path: '/admin', 
+    icon: '📊', 
+    roles: ['admin', 'staff'],
+    requiresPermission: null // Dashboard is always accessible to admin/staff
+  },
+  { 
+    label: 'User Approval', 
+    path: '/admin/approval', 
+    icon: '✅', 
+    roles: ['admin'], // ONLY admin
+    requiresPermission: null
+  },
+  { 
+    label: 'Contacts', 
+    path: '/contacts/dashboard', 
+    icon: '📇', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.CONTACTS
+  },
+  { 
+    label: 'Expenses', 
+    path: '/expenses', 
+    icon: '💸', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.EXPENSES
+  },
+  { 
+    label: 'Landing Page Setup', 
+    path: '/manageproduct', 
+    icon: '⚙️', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.PRODUCTS
+  },
   { type: 'header', label: 'Integration' },
-  { label: 'DICT Reports', path: '/dictreport', icon: '📈' },
-  { label: 'Billings', path: '/billings', icon: '💰' },
-  { label: 'Quotation', path: '/quotation', icon: '📝' },
-  { label: 'Tax Calculator', path: 'https://multifactorstax.netlify.app', icon: '📱', external: true },
-  
+  { 
+    label: 'DICT Reports', 
+    path: '/dictreport', 
+    icon: '📈', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.REPORTS
+  },
+  { 
+    label: 'Billings', 
+    path: '/billings', 
+    icon: '💰', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.BILLING
+  },
+  { 
+    label: 'Quotation', 
+    path: '/quotation', 
+    icon: '📝', 
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.QUOTATIONS
+  },
+  {
+    label: 'Tax Calculator',
+    path: 'https://multifactorstax.netlify.app',
+    icon: '📱',
+    external: true,
+    roles: ['admin', 'staff'],
+    requiresPermission: null // External link, always available
+  },
 ]
 
 const AdminSidebar = () => {
@@ -21,20 +77,89 @@ const AdminSidebar = () => {
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [visibleMenuItems, setVisibleMenuItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const filterMenuItems = async () => {
+      if (!profile) {
+        setVisibleMenuItems([])
+        setLoading(false)
+        return
+      }
+
+      const userRole = profile.role
+
+      // Get staff permissions if user is staff
+      let staffPermissions = []
+      if (userRole === 'staff') {
+        staffPermissions = await getStaffPermissions(profile.id)
+      }
+
+      // Filter menu items based on role and permissions
+      const filtered = menuItemsConfig.filter(item => {
+        // Always show headers
+        if (item.type === 'header') return true
+        
+        // Check if user has the required role
+        if (!item.roles) return true
+        if (!item.roles.includes(userRole)) return false
+
+        // If admin, show everything in their role list
+        if (userRole === 'admin') return true
+
+        // If staff, check permissions
+        if (userRole === 'staff') {
+          // If no specific permission required, show it
+          if (!item.requiresPermission) return true
+
+          // Check if staff has all_access
+          if (staffPermissions.includes(PERMISSION_TYPES.ALL_ACCESS)) {
+            return true
+          }
+
+          // Check if staff has specific permission
+          return staffPermissions.includes(item.requiresPermission)
+        }
+
+        return false
+      })
+
+      setVisibleMenuItems(filtered)
+      setLoading(false)
+    }
+
+    filterMenuItems()
+  }, [profile])
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
   }
+
   const isActive = (path) => location.pathname === path
+
+  if (loading) {
+    return (
+      <aside className="fixed top-0 left-0 h-screen w-64 bg-green-900 text-white z-50 flex flex-col">
+        <div className="p-4 border-b border-green-700">
+          <h1 className="text-xl font-bold">Multifactors Sales</h1>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </aside>
+    )
+  }
 
   return (
     <aside className="fixed top-0 left-0 h-screen w-64 bg-green-900 text-white z-50 flex flex-col">
       <div className="p-4 border-b border-green-700">
         <h1 className="text-xl font-bold">Multifactors Sales</h1>
       </div>
+      
       <nav className="flex-1 overflow-y-auto py-4">
-        {adminMenuItems.map((item, index) => (
+        {visibleMenuItems.map((item, index) => (
           item.type === 'header' ? (
             <div key={index} className="px-4 py-2 mt-4 mb-2">
               <p className="text-xs font-semibold text-green-300 uppercase tracking-wider">
@@ -68,6 +193,7 @@ const AdminSidebar = () => {
           )
         ))}
       </nav>
+
       <div className="border-t border-green-700 p-4">
         <div className="relative">
           <button
@@ -151,4 +277,5 @@ const AdminSidebar = () => {
     </aside>
   )
 }
+
 export default AdminSidebar

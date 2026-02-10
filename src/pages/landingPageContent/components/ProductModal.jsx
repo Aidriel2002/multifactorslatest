@@ -108,7 +108,6 @@ const ProductModal = ({
     };
   }, [showColorPicker, showSizePicker]);
 
-  // Monitor list state in editor
   useEffect(() => {
     if (!editorRef.current) return;
 
@@ -126,8 +125,8 @@ const ProductModal = ({
           }
         }
         setIsListActive(false);
-      } catch (e) {
-        // Ignore selection errors
+      } catch {
+        // walaaaaaaaaa
       }
     };
 
@@ -150,7 +149,6 @@ const ProductModal = ({
       [name]: type === 'checkbox' ? checked : value
     }));
     
-    // Clear error when user starts typing
     if (error) setError(null);
   };
 
@@ -158,14 +156,12 @@ const ProductModal = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size must be less than 5MB');
       e.target.value = '';
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please select a valid image file');
       e.target.value = '';
@@ -219,7 +215,6 @@ const ProductModal = ({
   const applyBullet = (e) => {
     e.preventDefault();
     try {
-      // Check if we're already in a list
       const selection = window.getSelection();
       if (selection && selection.anchorNode) {
         let node = selection.anchorNode;
@@ -233,7 +228,6 @@ const ProductModal = ({
           node = node.parentNode;
         }
         
-        // Toggle list
         document.execCommand('insertUnorderedList', false, null);
         setIsListActive(!inList);
       } else {
@@ -282,7 +276,6 @@ const ProductModal = ({
     e.preventDefault();
     setError(null);
 
-    // Validation
     if (!formData.title.trim()) {
       setError('Product name is required');
       return;

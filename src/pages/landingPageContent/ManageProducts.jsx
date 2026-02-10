@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { productAPI } from '../../lib/supabase';
 import ProductModal from './components/ProductModal';
 import AdminSidebar from '../../components/AdminSidebar';
-import EmployeeSidebar from '../../components/EmployeeSidebar';
 import { usePageSecurity } from '../../hooks/usePageSecurity';
 import { canManageProducts } from '../../utils/rbac';
 
@@ -17,28 +16,34 @@ const ManageProduct = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const { profile, loading: securityLoading } = usePageSecurity(canManageProducts);
+  const { loading: securityLoading } = usePageSecurity(canManageProducts);
 
-  const Sidebar = profile?.role === 'admin' ? AdminSidebar : EmployeeSidebar;
+  const loadProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await productAPI.getAll();
+      setProducts(data);
+    } catch (err) {
+      console.error('Error loading products:', err);
+      setErrorMessage('Failed to load products. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
-  // Set up real-time subscription
   useEffect(() => {
     const subscription = productAPI.subscribeToChanges((payload) => {
-      console.log('Real-time update:', payload);
       
       if (payload.eventType === 'INSERT') {
         setProducts(prev => {
-          // Check if product already exists to prevent duplicates
           const exists = prev.some(p => p.id === payload.new.id);
           if (exists) {
-            console.log('Product already exists, skipping insert');
             return prev;
           }
-          // Add new product at the beginning
           return [payload.new, ...prev];
         });
       } else if (payload.eventType === 'UPDATE') {
@@ -54,19 +59,6 @@ const ManageProduct = () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await productAPI.getAll();
-      setProducts(data);
-    } catch (err) {
-      console.error('Error loading products:', err);
-      setErrorMessage('Failed to load products. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openModal = (product = null) => {
     setEditingProduct(product);
@@ -103,7 +95,7 @@ const ManageProduct = () => {
       console.error('Error saving product:', err);
       const errorMsg = err.message || 'Failed to save product. Please try again.';
       setErrorMessage(errorMsg);
-      throw err; // Re-throw to let modal handle it
+      throw err; 
     } finally {
       setSaving(false);
     }
@@ -164,21 +156,20 @@ const ManageProduct = () => {
   const uniqueCategories = getUniqueCategories();
   const homepageCount = products.filter(p => p.display_on_homepage !== false).length;
 
-
   if (loading || securityLoading) {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading products...</p>
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading products...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+      <AdminSidebar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
         <div className="bg-white shadow">

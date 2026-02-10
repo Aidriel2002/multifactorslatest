@@ -3,6 +3,7 @@ import { usePageSecurity } from '../../hooks/usePageSecurity'
 import { canApproveUsers } from '../../utils/rbac'
 import { supabase } from '../../lib/supabase'
 import AdminSidebar from '../../components/AdminSidebar'
+import StaffPermissionsModal from '../../components/StaffPermissionsModal'
 
 const ApprovalPage = () => {
   const { profile, loading: securityLoading } = usePageSecurity(canApproveUsers)
@@ -11,6 +12,8 @@ const ApprovalPage = () => {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false)
 
   const itemsPerPage = 5
 
@@ -29,7 +32,6 @@ const ApprovalPage = () => {
   }
 
   useEffect(() => {
-    // Don't fetch data until security check is complete
     if (securityLoading) return
     
     let mounted = true
@@ -77,6 +79,15 @@ const ApprovalPage = () => {
     }
   }
 
+  const handleManagePermissions = (user) => {
+    setSelectedUser(user)
+    setIsPermissionsModalOpen(true)
+  }
+
+  const handlePermissionsUpdate = async () => {
+    await fetchUsers()
+  }
+
   const filteredUsers = users.filter(user =>
     filter === 'all' ? true : user.status === filter
   )
@@ -93,7 +104,6 @@ const ApprovalPage = () => {
     rejected: users.filter(u => u.status === 'rejected').length,
   }
 
-  // Show loading state while security check is in progress
   if (securityLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
@@ -110,7 +120,7 @@ const ApprovalPage = () => {
         <div className="bg-white shadow px-6 py-4">
           <h1 className="text-2xl font-bold text-gray-900">User Approval</h1>
           <p className="text-sm text-gray-600">
-            Review and manage user registrations
+            Review and manage user registrations and permissions
           </p>
         </div>
 
@@ -196,13 +206,20 @@ const ApprovalPage = () => {
                             }
                             className="border rounded px-2 py-1"
                           >
-                            <option value="employee">Employee</option>
+                            <option value="user">User</option>
+                            <option value="staff">Staff</option>
                             <option value="admin">Admin</option>
                           </select>
                         </td>
 
                         <td className="px-6 py-4">
-                          <span className="text-sm font-medium">
+                          <span className={`inline-flex px-2 text-xs leading-5 font-semibold rounded-full ${
+                            user.status === 'approved'
+                              ? 'bg-green-100 text-green-800'
+                              : user.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
                             {user.status}
                           </span>
                         </td>
@@ -211,27 +228,37 @@ const ApprovalPage = () => {
                           {new Date(user.created_at).toLocaleDateString()}
                         </td>
 
-                        <td className="px-6 py-4 space-x-2">
-                          {user.status !== 'approved' && (
-                            <button
-                              onClick={() =>
-                                updateUserStatus(user.id, 'approved')
-                              }
-                              className="text-green-600"
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {user.status !== 'rejected' && (
-                            <button
-                              onClick={() =>
-                                updateUserStatus(user.id, 'rejected')
-                              }
-                              className="text-red-600"
-                            >
-                              Reject
-                            </button>
-                          )}
+                        <td className="px-6 py-4">
+                          <div className="flex space-x-2">
+                            {user.status !== 'approved' && (
+                              <button
+                                onClick={() =>
+                                  updateUserStatus(user.id, 'approved')
+                                }
+                                className="text-green-600 hover:text-green-900 text-sm font-medium"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {user.status !== 'rejected' && user.status !== 'approved' && (
+                              <button
+                                onClick={() =>
+                                  updateUserStatus(user.id, 'rejected')
+                                }
+                                className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              >
+                                Reject
+                              </button>
+                            )}
+                            {user.role === 'staff' && user.status === 'approved' && (
+                              <button
+                                onClick={() => handleManagePermissions(user)}
+                                className="text-green-600 hover:text-green-900 text-sm font-medium"
+                              >
+                                Manage Permission
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -270,6 +297,16 @@ const ApprovalPage = () => {
           </div>
         </div>
       </div>
+
+      <StaffPermissionsModal
+        isOpen={isPermissionsModalOpen}
+        onClose={() => {
+          setIsPermissionsModalOpen(false)
+          setSelectedUser(null)
+        }}
+        user={selectedUser}
+        onUpdate={handlePermissionsUpdate}
+      />
     </div>
   )
 }

@@ -5,10 +5,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// ============================================
-// USER PROFILE FUNCTIONS
-// ============================================
-
 export const getCurrentUserProfile = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   
@@ -38,16 +34,14 @@ export const isAdmin = async () => {
   return profile?.role === 'admin' && profile?.status === 'approved'
 }
 
-// ============================================
-// PRODUCTS API
-// ============================================
-
 export const productAPI = {
+  // PUBLIC: Anyone can view products
   async getAll() {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
       return await secureAPI.select('products', {
-        order: { column: 'created_at', ascending: false }
+        order: { column: 'created_at', ascending: false },
+        requireAuth: false // Allow public access
       })
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -55,11 +49,13 @@ export const productAPI = {
     }
   },
 
+  // PUBLIC: Anyone can view a single product
   async getById(id) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
       const products = await secureAPI.select('products', {
-        eq: { id }
+        eq: { id },
+        requireAuth: false // Allow public access
       })
       return products?.[0] || null
     } catch (error) {
@@ -68,6 +64,7 @@ export const productAPI = {
     }
   },
 
+  // PROTECTED: Only approved users can create
   async create(product) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -90,6 +87,7 @@ export const productAPI = {
     }
   },
 
+  // PROTECTED: Only approved users can update
   async update(id, updates) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -105,6 +103,7 @@ export const productAPI = {
     }
   },
 
+  // PROTECTED: Only admins can delete
   async delete(id) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -116,6 +115,7 @@ export const productAPI = {
     }
   },
 
+  // PROTECTED: Only approved users can upsert
   async upsert(product) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -133,6 +133,7 @@ export const productAPI = {
     }
   },
 
+  // PUBLIC: Anyone can subscribe to product changes
   subscribeToChanges(callback) {
     const subscription = supabase
       .channel('products-changes')
@@ -148,10 +149,6 @@ export const productAPI = {
     return subscription
   }
 }
-
-// ============================================
-// QUOTATIONS API
-// ============================================
 
 export const quotationAPI = {
   async getAll(type = null) {
@@ -362,7 +359,6 @@ export const quotationAPI = {
   }
 }
 
-// Export default
 export default {
   supabase,
   getCurrentUserProfile,

@@ -9,13 +9,11 @@ export const usePageSecurity = (requirePermission) => {
   useEffect(() => {
     if (loading) return
 
-    // Not logged in
     if (!profile) {
       navigate('/', { replace: true })
       return
     }
 
-    // Not approved
     if (profile.status !== 'approved') {
       if (profile.status === 'pending') {
         navigate('/pending-approval', { replace: true })
@@ -27,7 +25,6 @@ export const usePageSecurity = (requirePermission) => {
       return
     }
 
-    // Check specific permission
     if (requirePermission && !requirePermission(profile)) {
       navigate('/', { replace: true })
     }

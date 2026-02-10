@@ -148,7 +148,6 @@ function EditPrintableTemplate() {
         <div className="p-8">
           <div className="max-w-4xl mx-auto">
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
-              {/* Info Banner */}
               <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h3 className="font-semibold text-blue-900 mb-2">Header Layout</h3>
                 <p className="text-sm text-blue-700">
@@ -157,7 +156,6 @@ function EditPrintableTemplate() {
                 </p>
               </div>
 
-              {/* Header Image Section */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Company Logo
@@ -205,7 +203,6 @@ function EditPrintableTemplate() {
                 )}
               </div>
 
-              {/* Company Information */}
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h3>
                 <p className="text-sm text-gray-500 mb-4">
@@ -255,7 +252,6 @@ function EditPrintableTemplate() {
                 </div>
               </div>
 
-              {/* Preview Section */}
               <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Header Preview</h3>
                 <div className="bg-white p-6 rounded border border-gray-300">
@@ -281,7 +277,6 @@ function EditPrintableTemplate() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex justify-end space-x-4">
                 <button
                   type="button"

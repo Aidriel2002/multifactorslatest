@@ -156,7 +156,6 @@ function EditQuotation() {
     setSaving(true);
 
     try {
-      // Update quotation
       const { error: quotationError } = await supabase
         .from('quotations')
         .update({
@@ -178,7 +177,6 @@ function EditQuotation() {
 
       if (quotationError) throw quotationError;
 
-      // Delete all existing items
       const { error: deleteError } = await supabase
         .from('quotation_items')
         .delete()
@@ -186,7 +184,6 @@ function EditQuotation() {
 
       if (deleteError) throw deleteError;
 
-      // Insert updated items
       const itemsToInsert = items.map((item, index) => ({
         quotation_id: id,
         description: item.description,
@@ -237,7 +234,6 @@ function EditQuotation() {
 
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
-            {/* Header Information */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Quotation Information
@@ -313,7 +309,6 @@ function EditQuotation() {
               </div>
             </div>
 
-            {/* Items Table */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Items</h2>
@@ -401,7 +396,6 @@ function EditQuotation() {
               </div>
             </div>
 
-            {/* Payment Terms */}
             <div className="mb-8">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Payment Terms
@@ -415,7 +409,6 @@ function EditQuotation() {
               />
             </div>
 
-            {/* Totals */}
             <div className="mb-8 flex justify-end">
               <div className="w-full md:w-1/2 lg:w-1/3 bg-gray-50 rounded-lg p-6 space-y-3">
                 <div className="flex justify-between text-gray-700">
@@ -433,7 +426,6 @@ function EditQuotation() {
               </div>
             </div>
 
-            {/* Signatures */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Authorized Signatures
@@ -512,7 +504,6 @@ function EditQuotation() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex justify-end space-x-4">
               <button
                 type="button"

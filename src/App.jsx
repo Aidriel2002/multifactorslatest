@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthProvider'
-import { ProtectedRoute, AdminRoute, EmployeeRoute } from './components/ProtectedRoute'
+import { ProtectedRoute, AdminRoute, EmployeeRoute, StaffOrAdminRoute } from './components/ProtectedRoute'
 import { SecureRoute, AdminOnlyRoute, ApprovedOnlyRoute } from './components/SecureRoute'
 
 import {
@@ -9,7 +9,8 @@ import {
   canAccessContacts,
   canAccessQuotations,
   canAccessReports,
-  canManageProducts
+  canManageProducts,
+  isAdminOrStaff
 } from './utils/rbac'
 
 import PendingApproval from './pages/PendingApproval'
@@ -117,20 +118,27 @@ function App() {
           <Route path="/productlist" element={<ProductList />} />
 
           <Route
-            path="/employee"
+            path="/user"
             element={<EmployeeRoute><EmployeeDashboard /></EmployeeRoute>}
           />
 
           <Route
             path="/admin"
             element={
-              <AdminRoute>
+              <SecureRoute requirePermission={isAdminOrStaff}>
                 <AdminLayout />
-              </AdminRoute>
+              </SecureRoute>
             }
           >
             <Route index element={<AdminDashboard />} />
-            <Route path="approval" element={<ApprovalPage />} />
+            <Route 
+              path="approval" 
+              element={
+                <AdminOnlyRoute>
+                  <ApprovalPage />
+                </AdminOnlyRoute>
+              } 
+            />
             <Route path="system" element={<div className="p-6">System Settings</div>} />
           </Route>
 
@@ -282,7 +290,6 @@ function App() {
             }
           />
 
-          {/* Product Management - Admin Only */}
           <Route
             path="/manageproduct"
             element={

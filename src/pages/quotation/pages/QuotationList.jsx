@@ -17,7 +17,6 @@ function QuotationList() {
   useEffect(() => {
     fetchQuotations();
     
-    // Subscribe to real-time changes
     const subscription = supabase
       .channel('quotations-changes')
       .on(
@@ -152,26 +151,25 @@ function QuotationList() {
                 className="flex items-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
               >
                 <DocumentTextIcon className="h-5 w-5 mr-2" />
-                Edit Printable Page
+                Header
               </Link>
               <Link
                 to="/quotation/create/quotation1"
                 className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 <PlusIcon className="h-5 w-5 mr-2" />
-                New Quotation 1
+                Quotation 1
               </Link>
               <Link
                 to="/quotation/create/quotation2"
                 className="flex items-center px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
               >
                 <PlusIcon className="h-5 w-5 mr-2" />
-                New Quotation 2
+                Quotation 2
               </Link>
             </div>
           </div>
 
-          {/* Quotations Table */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             {loading || securityLoading ? (
               <div className="p-8 text-center">

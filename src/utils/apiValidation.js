@@ -1,29 +1,23 @@
-/**
- * Secure API wrapper with idempotent operations
- * Uses lazy initialization to avoid circular dependencies
- */
+import { getStaffPermissions, PERMISSION_TYPES } from '../utils/rbac'
+
 class SecureAPI {
   constructor() {
-    this._supabase = null // Lazy initialization
+    this._supabase = null 
     this.cache = new Map()
-    this._supabasePromise = null // Cache the import promise
+    this._supabasePromise = null 
   }
 
-  /**
-   * Get supabase client (lazy loading to avoid circular dependency)
-   */
   async getSupabase() {
     if (this._supabase) {
       return this._supabase
     }
 
-    // If import is already in progress, wait for it
     if (this._supabasePromise) {
       await this._supabasePromise
       return this._supabase
     }
 
-    // Start the import
+   
     this._supabasePromise = import('../lib/supabase').then(module => {
       this._supabase = module.supabase
       return this._supabase
@@ -33,9 +27,6 @@ class SecureAPI {
     return this._supabase
   }
 
-  /**
-   * Get current user profile with role and status (cached)
-   */
   async getCurrentProfile(forceRefresh = false) {
     const supabase = await this.getSupabase()
     const { data: { user } } = await supabase.auth.getUser()
@@ -44,7 +35,6 @@ class SecureAPI {
       throw new Error('Not authenticated')
     }
 
-    // Check cache first
     const cacheKey = `profile_${user.id}`
     if (!forceRefresh && this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey)
@@ -58,42 +48,77 @@ class SecureAPI {
 
     if (error) throw error
     
-    // Cache for 5 minutes
     this.cache.set(cacheKey, profile)
     setTimeout(() => this.cache.delete(cacheKey), 5 * 60 * 1000)
     
     return profile
   }
 
-  /**
-   * Clear profile cache
-   */
   clearCache() {
     this.cache.clear()
   }
 
-  /**
-   * Check if user is approved
-   */
+ 
   async isApproved() {
     const profile = await this.getCurrentProfile()
     return profile?.status === 'approved'
   }
 
-  /**
-   * Check if user is admin
-   */
+  
   async isAdmin() {
     const profile = await this.getCurrentProfile()
     return profile?.role === 'admin' && profile?.status === 'approved'
   }
 
+  
+  async isStaff() {
+    const profile = await this.getCurrentProfile()
+    return profile?.role === 'staff' && profile?.status === 'approved'
+  }
+
+  async isAdminOrStaff() {
+    const profile = await this.getCurrentProfile()
+    return (profile?.role === 'admin' || profile?.role === 'staff') && profile?.status === 'approved'
+  }
+
+  async hasPermission(permission) {
+    const profile = await this.getCurrentProfile()
+    
+    if (!profile || profile.status !== 'approved') return false
+    if (profile.role === 'admin') return true
+    
+    if (profile.role === 'staff') {
+      const permissions = await getStaffPermissions(profile.id)
+      
+      if (permissions.includes(PERMISSION_TYPES.ALL_ACCESS)) {
+        return true
+      }
+      
+      return permissions.includes(permission)
+    }
+    
+    return false
+  }
+
   /**
-   * Idempotent SELECT query (safe to retry)
+   * @param {string} table 
+   * @param {object} options 
+   * @param {boolean} options.requireAuth 
+   * @param {string} options.requirePermission 
    */
   async select(table, options = {}) {
-    if (!(await this.isApproved())) {
-      throw new Error('User not approved')
+    const requireAuth = options.requireAuth !== false
+
+    if (requireAuth) {
+      if (!(await this.isApproved())) {
+        throw new Error('User not approved')
+      }
+
+      if (options.requirePermission) {
+        if (!(await this.hasPermission(options.requirePermission))) {
+          throw new Error('Permission denied')
+        }
+      }
     }
 
     const supabase = await this.getSupabase()
@@ -135,17 +160,19 @@ class SecureAPI {
     return data
   }
 
-  /**
-   * Idempotent INSERT (upsert with unique constraint)
-   */
-  async insertIdempotent(table, data, uniqueFields = ['id']) {
+  async insertIdempotent(table, data, uniqueFields = ['id'], options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
     }
 
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
+    }
+
     const supabase = await this.getSupabase()
 
-    // Build query to check if record exists
     let checkQuery = supabase.from(table).select('id')
     
     uniqueFields.forEach(field => {
@@ -156,13 +183,10 @@ class SecureAPI {
 
     const { data: existing } = await checkQuery.maybeSingle()
 
-    // If exists, return existing record (idempotent)
     if (existing) {
-      console.log(`Record already exists in ${table}, skipping insert`)
       return existing
     }
 
-    // Insert new record
     const { data: result, error } = await supabase
       .from(table)
       .insert(data)
@@ -170,9 +194,7 @@ class SecureAPI {
       .single()
 
     if (error) {
-      // Handle race condition
       if (error.code === '23505') {
-        console.log(`Duplicate detected during insert, fetching existing record`)
         const { data: existingRecord } = await checkQuery.single()
         return existingRecord
       }
@@ -182,12 +204,16 @@ class SecureAPI {
     return result
   }
 
-  /**
-   * Idempotent UPSERT
-   */
+  
   async upsert(table, data, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
+    }
+
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
     }
 
     const supabase = await this.getSupabase()
@@ -203,17 +229,19 @@ class SecureAPI {
     return result
   }
 
-  /**
-   * Idempotent UPDATE by ID
-   */
-  async update(table, id, data) {
+  async update(table, id, data, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
     }
 
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
+    }
+
     const supabase = await this.getSupabase()
 
-    // Fetch current record
     const { data: current } = await supabase
       .from(table)
       .select('*')
@@ -224,17 +252,14 @@ class SecureAPI {
       throw new Error(`Record not found in ${table} with id ${id}`)
     }
 
-    // Check if any values actually changed
     const hasChanges = Object.keys(data).some(key => {
       return JSON.stringify(current[key]) !== JSON.stringify(data[key])
     })
 
     if (!hasChanges) {
-      console.log(`No changes detected for ${table}:${id}, skipping update`)
       return current
     }
 
-    // Perform update
     const { data: result, error } = await supabase
       .from(table)
       .update(data)
@@ -246,12 +271,15 @@ class SecureAPI {
     return result
   }
 
-  /**
-   * Idempotent conditional UPDATE
-   */
-  async conditionalUpdate(table, id, expectedState, newData) {
+  async conditionalUpdate(table, id, expectedState, newData, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
+    }
+
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
     }
 
     const supabase = await this.getSupabase()
@@ -276,9 +304,6 @@ class SecureAPI {
     return result
   }
 
-  /**
-   * Idempotent DELETE
-   */
   async delete(table, id) {
     if (!(await this.isAdmin())) {
       throw new Error('Admin access required')
@@ -292,7 +317,6 @@ class SecureAPI {
       .maybeSingle()
 
     if (!existing) {
-      console.log(`Record ${id} not found in ${table}, already deleted`)
       return { deleted: false, reason: 'already_deleted' }
     }
 
@@ -305,9 +329,6 @@ class SecureAPI {
     return { deleted: true }
   }
 
-  /**
-   * Idempotent soft DELETE
-   */
   async softDelete(table, id) {
     if (!(await this.isAdmin())) {
       throw new Error('Admin access required')
@@ -319,12 +340,15 @@ class SecureAPI {
     })
   }
 
-  /**
-   * Batch operations
-   */
   async batchUpsert(table, records, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
+    }
+
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
     }
 
     const supabase = await this.getSupabase()
@@ -340,12 +364,15 @@ class SecureAPI {
     return result
   }
 
-  /**
-   * Safe increment
-   */
-  async increment(table, id, column, amount = 1) {
+  async increment(table, id, column, amount = 1, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')
+    }
+
+    if (options.requirePermission) {
+      if (!(await this.hasPermission(options.requirePermission))) {
+        throw new Error('Permission denied')
+      }
     }
 
     const supabase = await this.getSupabase()
@@ -357,17 +384,18 @@ class SecureAPI {
 
     const newValue = (current?.[column] || 0) + amount
 
-    return this.update(table, id, { [column]: newValue })
+    return this.update(table, id, { [column]: newValue }, options)
   }
 }
 
-// Export singleton instance (created immediately)
 export const secureAPI = new SecureAPI()
 
-// Export helper functions
 export const getCurrentProfile = (forceRefresh) => secureAPI.getCurrentProfile(forceRefresh)
 export const isApproved = () => secureAPI.isApproved()
 export const isAdmin = () => secureAPI.isAdmin()
+export const isStaff = () => secureAPI.isStaff()
+export const isAdminOrStaff = () => secureAPI.isAdminOrStaff()
+export const hasPermission = (permission) => secureAPI.hasPermission(permission)
 export const clearCache = () => secureAPI.clearCache()
 
 export default secureAPI

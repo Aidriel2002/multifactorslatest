@@ -1,15 +1,42 @@
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
-/**
- * Wrapper component that checks permissions before rendering children
- * Usage: <SecureRoute requirePermission={canAccessBilling}>{children}</SecureRoute>
- */
 export const SecureRoute = ({ children, requirePermission }) => {
-  const { profile, loading } = useAuth()
+  const { profile, loading: authLoading } = useAuth()
+  const [hasPermission, setHasPermission] = useState(false)
+  const [checkingPermission, setCheckingPermission] = useState(true)
 
-  // Show loading state
-  if (loading) {
+  useEffect(() => {
+    const checkPermission = async () => {
+      if (authLoading || !profile) {
+        setCheckingPermission(true)
+        return
+      }
+
+      setCheckingPermission(true)
+
+      try {
+        if (requirePermission) {
+          // Handle both sync and async permission functions
+          const result = requirePermission(profile)
+          const permitted = result instanceof Promise ? await result : result
+          setHasPermission(permitted)
+        } else {
+          setHasPermission(true)
+        }
+      } catch (error) {
+        console.error('Error checking permission:', error)
+        setHasPermission(false)
+      } finally {
+        setCheckingPermission(false)
+      }
+    }
+
+    checkPermission()
+  }, [profile, authLoading, requirePermission])
+
+  if (authLoading || checkingPermission) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -17,12 +44,10 @@ export const SecureRoute = ({ children, requirePermission }) => {
     )
   }
 
-  // Check if user is authenticated
   if (!profile) {
     return <Navigate to="/" replace />
   }
 
-  // Check if user is approved
   if (profile.status !== 'approved') {
     if (profile.status === 'pending') {
       return <Navigate to="/pending-approval" replace />
@@ -33,17 +58,13 @@ export const SecureRoute = ({ children, requirePermission }) => {
     return <Navigate to="/" replace />
   }
 
-  // Check specific permission if provided
-  if (requirePermission && !requirePermission(profile)) {
-    return <Navigate to="/" replace />
+  if (requirePermission && !hasPermission) {
+    return <Navigate to="/admin" replace />
   }
 
   return children
 }
 
-/**
- * Admin-only route wrapper
- */
 export const AdminOnlyRoute = ({ children }) => {
   const { profile, loading } = useAuth()
 
@@ -56,12 +77,11 @@ export const AdminOnlyRoute = ({ children }) => {
   }
 
   if (!profile || profile.status !== 'approved' || profile.role !== 'admin') {
-    return <Navigate to="/" replace />
+    return <Navigate to="/admin" replace />
   }
 
   return children
 }
-
 
 export const ApprovedOnlyRoute = ({ children }) => {
   const { profile, loading } = useAuth()
