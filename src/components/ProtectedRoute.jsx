@@ -80,7 +80,6 @@ export const StaffOrAdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  // Allow both admin and staff
   if (profile.role !== 'admin' && profile.role !== 'staff') {
     return <Navigate to="/user" replace />
   }

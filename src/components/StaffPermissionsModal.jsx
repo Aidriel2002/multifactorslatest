@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { clearPermissionsCache } from '../utils/rbac'
+import { useAuth } from '../contexts/AuthContext'
 
 const PERMISSIONS = {
   billing: { label: 'Billings', icon: '💰', description: 'Access billing dashboard and payment management' },
   contacts: { label: 'Contacts', icon: '📇', description: 'Manage customer contacts and information' },
   quotations: { label: 'Quotations', icon: '📝', description: 'Create and manage quotations' },
   reports: { label: 'DICT Reports', icon: '📈', description: 'View and generate reports' },
-  products: { label: 'Products', icon: '⚙️', description: 'Manage products and landing page setup' },
+  products: { label: 'Landing Page Setup', icon: '⚙️', description: 'Manage Products and Projects page setup' },
   expenses: { label: 'Expenses', icon: '💸', description: 'Track and manage expenses' },
 }
 
 const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
+  const { profile: currentUserProfile, refreshProfile } = useAuth()
   const [permissions, setPermissions] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -97,6 +100,14 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
           .insert(permissionsToInsert)
 
         if (error) throw error
+      }
+
+      // Clear the permissions cache for this user
+      clearPermissionsCache(user.id)
+
+      // If the admin is updating their own permissions, refresh their profile
+      if (currentUserProfile?.id === user.id) {
+        await refreshProfile()
       }
 
       alert('Permissions updated successfully!')

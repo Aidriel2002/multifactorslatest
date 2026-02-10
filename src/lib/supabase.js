@@ -367,3 +367,122 @@ export default {
   productAPI,
   quotationAPI
 }
+
+export const projectAPI = {
+  // Get all projects
+  async getAll() {
+    const { data, error } = await supabase
+      .from('project')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get single project
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('project')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Create project
+  async create(projectData) {
+    const { data, error } = await supabase
+      .from('project')
+      .insert([projectData])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Update project
+  async update(id, projectData) {
+    const { data, error } = await supabase
+      .from('project')
+      .update(projectData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Delete project
+  async delete(id) {
+    // First get the project to find the image URL
+    const { data: project } = await supabase
+      .from('project')
+      .select('image_url')
+      .eq('id', id)
+      .single();
+
+    // Delete the image from storage if it exists
+    if (project?.image_url) {
+      const imagePath = project.image_url.split('/').pop();
+      await supabase.storage
+        .from('project-images')
+        .remove([imagePath]);
+    }
+
+    // Delete the project record
+    const { error } = await supabase
+      .from('project')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  // Upload image to storage
+  async uploadImage(file) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from('project-images')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('project-images')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  },
+
+  // Delete image from storage
+  async deleteImage(imageUrl) {
+    const imagePath = imageUrl.split('/').pop();
+    const { error } = await supabase.storage
+      .from('project-images')
+      .remove([imagePath]);
+
+    if (error) throw error;
+  },
+
+  // Subscribe to changes
+  subscribeToChanges(callback) {
+    return supabase
+      .channel('project-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'project' },
+        callback
+      )
+      .subscribe();
+  }
+};

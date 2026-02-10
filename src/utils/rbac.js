@@ -18,9 +18,11 @@ export const PERMISSION_TYPES = {
   QUOTATIONS: 'quotations',
   REPORTS: 'reports',
   PRODUCTS: 'products',
+  PROJECTS: 'projects',
   EXPENSES: 'expenses',
   ALL_ACCESS: 'all_access'
 }
+
 const permissionsCache = new Map()
 const CACHE_DURATION = 5 * 60 * 1000 
 
@@ -49,14 +51,15 @@ export const getStaffPermissions = async (userId) => {
 
     return permissions
   } catch (error) {
-    console.error('Error fetching staff permissions:', error)
+    console.error('❌ Error fetching staff permissions:', error)
     return []
   }
 }
 
 export const clearPermissionsCache = (userId) => {
   if (userId) {
-    permissionsCache.delete(`permissions_${userId}`)
+    const cacheKey = `permissions_${userId}`
+    permissionsCache.delete(cacheKey)
   } else {
     permissionsCache.clear()
   }
@@ -84,7 +87,6 @@ export const isAdmin = (profile) => {
 export const isStaff = (profile) => {
   return hasRole(profile, [ROLES.STAFF])
 }
-
 
 export const isAdminOrStaff = (profile) => {
   return hasRole(profile, [ROLES.ADMIN, ROLES.STAFF])
@@ -158,6 +160,18 @@ export const canManageProducts = async (profile) => {
   return await canAccessProducts(profile)
 }
 
+export const canManageProjects = async (profile) => {
+  if (!profile || profile.status !== STATUS.APPROVED) return false
+  
+  if (profile.role === ROLES.ADMIN) return true
+  
+  if (profile.role === ROLES.STAFF) {
+    return await hasStaffPermission(profile.id, PERMISSION_TYPES.PRODUCTS)
+  }
+  
+  return false
+}
+
 export const canAccessExpenses = async (profile) => {
   if (!profile || profile.status !== STATUS.APPROVED) return false
   
@@ -197,6 +211,11 @@ export const permissions = {
   createProduct: canManageProducts,
   updateProduct: canManageProducts,
   deleteProduct: (profile) => isAdmin(profile),
+  
+  viewProjects: canManageProjects,
+  createProject: canManageProjects,
+  updateProject: canManageProjects,
+  deleteProject: (profile) => isAdmin(profile),
   
   viewQuotations: canAccessQuotations,
   createQuotation: canAccessQuotations,

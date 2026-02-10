@@ -10,7 +10,8 @@ import {
   canAccessQuotations,
   canAccessReports,
   canManageProducts,
-  isAdminOrStaff
+  isAdminOrStaff,
+  canManageProjects
 } from './utils/rbac'
 
 import PendingApproval from './pages/PendingApproval'
@@ -57,8 +58,10 @@ import EditPrintableTemplate from './pages/quotation/pages/EditPrintableTemplate
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
 
 import ManageProduct from './pages/landingPageContent/ManageProducts'
+import ManageProject from './pages/landingPageContent/ManageProject'
 
 import AuthModal from './components/AuthModal'
+import AccountLogin from './components/AccountLogin'
 
 const LandingPage = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -116,10 +119,19 @@ function App() {
           <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/account-rejected" element={<AccountRejected />} />
           <Route path="/productlist" element={<ProductList />} />
-
+          <Route path="/accountlogin" element={<AccountLogin />} />
           <Route
             path="/user"
             element={<EmployeeRoute><EmployeeDashboard /></EmployeeRoute>}
+          />
+
+          <Route
+            path="/manageproject"
+            element={
+              <SecureRoute requirePermission={canManageProjects}>
+                <ManageProject />
+              </SecureRoute>
+            }
           />
 
           <Route

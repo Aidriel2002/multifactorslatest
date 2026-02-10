@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productAPI } from '../../lib/supabase';
 import ProductModal from './components/ProductModal';
-import AdminSidebar from '../../components/AdminSidebar';
 import { usePageSecurity } from '../../hooks/usePageSecurity';
 import { canManageProducts } from '../../utils/rbac';
+import LandingSideBar from './components/LandingSideBar';
 
 const ManageProduct = () => {
   const [products, setProducts] = useState([]);
@@ -169,7 +169,7 @@ const ManageProduct = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
+      <LandingSideBar />
 
       <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
         <div className="bg-white shadow">

@@ -18,7 +18,6 @@ export const SecureRoute = ({ children, requirePermission }) => {
 
       try {
         if (requirePermission) {
-          // Handle both sync and async permission functions
           const result = requirePermission(profile)
           const permitted = result instanceof Promise ? await result : result
           setHasPermission(permitted)

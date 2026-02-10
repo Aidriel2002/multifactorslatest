@@ -1,0 +1,72 @@
+.billings-sidebar {
+  isolation: isolate;
+}
+
+.landing-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 256px;
+  z-index: 50;
+  transition: transform 0.3s ease-in-out;
+}
+
+.landing-burger {
+  position: fixed;
+  top: 0.875rem;
+  left: 0.875rem;
+  z-index: 60;
+  background-color: #14532d;
+  border: none;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  transition: background-color 0.2s;
+}
+
+.landing-burger:hover {
+  background-color: #166534;
+}
+
+.burger-line {
+  display: block;
+  width: 1.375rem;
+  height: 2px;
+  background-color: white;
+  border-radius: 2px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center;
+}
+
+.landing-burger.is-open .burger-line:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.landing-burger.is-open .burger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.landing-burger.is-open .burger-line:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+
+.landing-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.landing-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}

@@ -15,6 +15,9 @@ const Navigation = ({ onLoginClick }) => {
     { name: 'Services', path: '#services', type: 'scroll' }
   ];
 
+  // Check if current path is /accountlogin
+  const showLoginButton = location.pathname === '/accountlogin';
+
   const handleNavClick = (link) => {
     setIsMenuOpen(false);
 
@@ -64,14 +67,17 @@ const Navigation = ({ onLoginClick }) => {
             ))}
           </div>
 
-          <div className="desktop-login">
-            <button 
-              onClick={onLoginClick}
-              className="bg-[#235312] text-white px-9 py-2 rounded-md hover:bg-[#509637] transition-colors font-bold"
-            >
-              LOG IN
-            </button>
-          </div>
+          {/* Only show login button on /accountlogin path */}
+          {showLoginButton && (
+            <div className="desktop-login">
+              <button 
+                onClick={onLoginClick}
+                className="bg-[#235312] text-white px-9 py-2 rounded-md hover:bg-[#509637] transition-colors font-bold"
+              >
+                LOG IN
+              </button>
+            </div>
+          )}
 
           <div className="mobile-menu-btn">
             <button
@@ -95,15 +101,18 @@ const Navigation = ({ onLoginClick }) => {
                     {link.name}
                   </button>
                 ))}
-                <button 
-                  onClick={() => {
-                    onLoginClick();
-                    setIsMenuOpen(false);
-                  }}
-                  className="bg-[#235312] text-white px-6 py-2 rounded-md hover:bg-[#509637] transition-colors w-full font-bold"
-                >
-                  LOG IN
-                </button>
+                {/* Only show login button in mobile menu on /accountlogin path */}
+                {showLoginButton && (
+                  <button 
+                    onClick={() => {
+                      onLoginClick();
+                      setIsMenuOpen(false);
+                    }}
+                    className="bg-[#235312] text-white px-6 py-2 rounded-md hover:bg-[#509637] transition-colors w-full font-bold"
+                  >
+                    LOG IN
+                  </button>
+                )}
               </div>
             </div>
           </div>

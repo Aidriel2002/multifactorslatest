@@ -17,7 +17,6 @@ class SecureAPI {
       return this._supabase
     }
 
-   
     this._supabasePromise = import('../lib/supabase').then(module => {
       this._supabase = module.supabase
       return this._supabase
