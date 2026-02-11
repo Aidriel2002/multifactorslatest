@@ -37,11 +37,9 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
 
       const userPermissions = data?.map(p => p.permission) || []
       
-      // Check if user has all_access
       const hasAllAccess = userPermissions.includes('all_access')
       setAllAccess(hasAllAccess)
       
-      // Only set individual permissions if all_access is NOT enabled
       if (!hasAllAccess) {
         setPermissions(userPermissions)
       } else {
@@ -55,8 +53,7 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
   }
 
   const handlePermissionToggle = (permission) => {
-    if (allAccess) return // Can't modify individual permissions when all_access is enabled
-
+    if (allAccess) return 
     setPermissions(prev => 
       prev.includes(permission)
         ? prev.filter(p => p !== permission)
@@ -69,7 +66,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
     setAllAccess(newAllAccess)
     
     if (newAllAccess) {
-      // When enabling all_access, clear individual permissions
       setPermissions([])
     }
   }
@@ -77,20 +73,16 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Delete all existing permissions for this user
       await supabase
         .from('staff_permissions')
         .delete()
         .eq('user_id', user.id)
 
-      // Insert new permissions based on what's selected
       let permissionsToInsert = []
       
       if (allAccess) {
-        // If all_access is checked, only insert all_access
         permissionsToInsert = [{ user_id: user.id, permission: 'all_access' }]
       } else if (permissions.length > 0) {
-        // If individual permissions are selected, insert only those
         permissionsToInsert = permissions.map(p => ({ user_id: user.id, permission: p }))
       }
 
@@ -102,10 +94,8 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
         if (error) throw error
       }
 
-      // Clear the permissions cache for this user
       clearPermissionsCache(user.id)
 
-      // If the admin is updating their own permissions, refresh their profile
       if (currentUserProfile?.id === user.id) {
         await refreshProfile()
       }
@@ -126,15 +116,12 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* Background overlay */}
         <div 
           className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
           onClick={onClose}
         />
 
-        {/* Modal panel */}
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full relative z-10">
-          {/* Header */}
           <div className="bg-green-900 px-6 py-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-white">
@@ -151,7 +138,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
             </div>
           </div>
 
-          {/* User info */}
           <div className="bg-gray-50 px-6 py-4 border-b">
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-lg">
@@ -173,9 +159,7 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
             </div>
           ) : (
             <>
-              {/* Body */}
               <div className="px-6 py-4">
-                {/* All Access Toggle */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-200">
                   <label className="flex items-start cursor-pointer">
                     <div className="flex items-center h-6">
@@ -205,7 +189,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   </label>
                 </div>
 
-                {/* Divider */}
                 <div className="relative mb-6">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
@@ -215,7 +198,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   </div>
                 </div>
 
-                {/* Individual Permissions */}
                 <div className="space-y-3">
                   {Object.entries(PERMISSIONS).map(([key, { label, icon, description }]) => (
                     <div
@@ -250,7 +232,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   ))}
                 </div>
 
-                {/* Warning */}
                 <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex">
                     <div className="flex-shrink-0">
@@ -267,7 +248,6 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="bg-gray-50 px-6 py-4 flex justify-between items-center">
                 <div className="text-sm text-gray-600">
                   {allAccess ? (

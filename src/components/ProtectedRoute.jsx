@@ -46,7 +46,12 @@ export const AdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  if (profile.status !== 'approved' || (profile.role !== 'admin' && profile.role !== 'staff')) {
+  if (profile.status !== 'approved') {
+    return <Navigate to="/login" replace />
+  }
+
+  // Redirect non-admin/staff users to /user
+  if (profile.role !== 'admin' && profile.role !== 'staff') {
     return <Navigate to="/user" replace />
   }
 
@@ -80,6 +85,7 @@ export const StaffOrAdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
+  // Redirect non-admin/staff users to /user
   if (profile.role !== 'admin' && profile.role !== 'staff') {
     return <Navigate to="/user" replace />
   }
@@ -102,11 +108,20 @@ export const EmployeeRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
+  if (profile.status === 'pending') {
+    return <Navigate to="/pending-approval" replace />
+  }
+
+  if (profile.status === 'rejected') {
+    return <Navigate to="/account-rejected" replace />
+  }
+
   if (profile.status !== 'approved') {
     return <Navigate to="/login" replace />
   }
 
-  if (profile.role !== 'user') {
+  // Redirect admin/staff users to /admin
+  if (profile.role === 'admin' || profile.role === 'staff') {
     return <Navigate to="/admin" replace />
   }
 
@@ -137,9 +152,7 @@ export const PublicRoute = ({ children }) => {
       if (profile.role === 'admin' || profile.role === 'staff') {
         return <Navigate to="/admin" replace />
       }
-      if (profile.role === 'user') {
-        return <Navigate to="/user" replace />
-      }
+      return <Navigate to="/user" replace />
     }
   }
 

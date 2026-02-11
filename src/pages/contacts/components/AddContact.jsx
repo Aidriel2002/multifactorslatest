@@ -113,7 +113,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Site Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Site Name <span className="text-red-500">*</span>
@@ -128,7 +127,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name <span className="text-red-500">*</span>
@@ -143,7 +141,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* Contact Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact # <span className="text-red-500">*</span>
@@ -158,7 +155,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* FB Account */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   FB Account
@@ -172,7 +168,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* Province */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Province <span className="text-red-500">*</span>
@@ -187,7 +182,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   City/Municipality <span className="text-red-500">*</span>
@@ -202,7 +196,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* Project Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Project Name <span className="text-red-500">*</span>
@@ -217,7 +210,6 @@ const AddContactModal = ({ isOpen, onClose, onSubmit, contact }) => {
                 />
               </div>
 
-              {/* Contact Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Type <span className="text-red-500">*</span>

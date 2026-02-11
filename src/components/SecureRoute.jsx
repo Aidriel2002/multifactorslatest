@@ -58,7 +58,10 @@ export const SecureRoute = ({ children, requirePermission }) => {
   }
 
   if (requirePermission && !hasPermission) {
-    return <Navigate to="/admin" replace />
+    if (profile.role === 'admin' || profile.role === 'staff') {
+      return <Navigate to="/admin" replace />
+    }
+    return <Navigate to="/user" replace />
   }
 
   return children
@@ -93,7 +96,17 @@ export const ApprovedOnlyRoute = ({ children }) => {
     )
   }
 
-  if (!profile || profile.status !== 'approved') {
+  if (!profile) {
+    return <Navigate to="/" replace />
+  }
+
+  if (profile.status !== 'approved') {
+    if (profile.status === 'pending') {
+      return <Navigate to="/pending-approval" replace />
+    }
+    if (profile.status === 'rejected') {
+      return <Navigate to="/account-rejected" replace />
+    }
     return <Navigate to="/" replace />
   }
 

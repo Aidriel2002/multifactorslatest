@@ -44,7 +44,6 @@ const Providers = () => {
         setProviders(providersData || [])
       }
 
-      // Fetch projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')

@@ -35,13 +35,12 @@ export const isAdmin = async () => {
 }
 
 export const productAPI = {
-  // PUBLIC: Anyone can view products
   async getAll() {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
       return await secureAPI.select('products', {
         order: { column: 'created_at', ascending: false },
-        requireAuth: false // Allow public access
+        requireAuth: false 
       })
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -49,13 +48,12 @@ export const productAPI = {
     }
   },
 
-  // PUBLIC: Anyone can view a single product
   async getById(id) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
       const products = await secureAPI.select('products', {
         eq: { id },
-        requireAuth: false // Allow public access
+        requireAuth: false 
       })
       return products?.[0] || null
     } catch (error) {
@@ -64,7 +62,6 @@ export const productAPI = {
     }
   },
 
-  // PROTECTED: Only approved users can create
   async create(product) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -87,7 +84,6 @@ export const productAPI = {
     }
   },
 
-  // PROTECTED: Only approved users can update
   async update(id, updates) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -103,7 +99,6 @@ export const productAPI = {
     }
   },
 
-  // PROTECTED: Only admins can delete
   async delete(id) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -115,7 +110,6 @@ export const productAPI = {
     }
   },
 
-  // PROTECTED: Only approved users can upsert
   async upsert(product) {
     try {
       const { secureAPI } = await import('../utils/apiValidation')
@@ -133,7 +127,6 @@ export const productAPI = {
     }
   },
 
-  // PUBLIC: Anyone can subscribe to product changes
   subscribeToChanges(callback) {
     const subscription = supabase
       .channel('products-changes')
@@ -369,7 +362,6 @@ export default {
 }
 
 export const projectAPI = {
-  // Get all projects
   async getAll() {
     const { data, error } = await supabase
       .from('project')
@@ -380,7 +372,6 @@ export const projectAPI = {
     return data;
   },
 
-  // Get single project
   async getById(id) {
     const { data, error } = await supabase
       .from('project')
@@ -392,7 +383,6 @@ export const projectAPI = {
     return data;
   },
 
-  // Create project
   async create(projectData) {
     const { data, error } = await supabase
       .from('project')
@@ -404,7 +394,6 @@ export const projectAPI = {
     return data;
   },
 
-  // Update project
   async update(id, projectData) {
     const { data, error } = await supabase
       .from('project')
@@ -417,16 +406,13 @@ export const projectAPI = {
     return data;
   },
 
-  // Delete project
   async delete(id) {
-    // First get the project to find the image URL
     const { data: project } = await supabase
       .from('project')
       .select('image_url')
       .eq('id', id)
       .single();
 
-    // Delete the image from storage if it exists
     if (project?.image_url) {
       const imagePath = project.image_url.split('/').pop();
       await supabase.storage
@@ -434,7 +420,6 @@ export const projectAPI = {
         .remove([imagePath]);
     }
 
-    // Delete the project record
     const { error } = await supabase
       .from('project')
       .delete()
@@ -443,7 +428,6 @@ export const projectAPI = {
     if (error) throw error;
   },
 
-  // Upload image to storage
   async uploadImage(file) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
@@ -465,7 +449,6 @@ export const projectAPI = {
     return data.publicUrl;
   },
 
-  // Delete image from storage
   async deleteImage(imageUrl) {
     const imagePath = imageUrl.split('/').pop();
     const { error } = await supabase.storage
@@ -475,7 +458,6 @@ export const projectAPI = {
     if (error) throw error;
   },
 
-  // Subscribe to changes
   subscribeToChanges(callback) {
     return supabase
       .channel('project-changes')
