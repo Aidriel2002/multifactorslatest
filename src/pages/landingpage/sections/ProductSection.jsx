@@ -401,7 +401,7 @@ const ProductSection = () => {
           </div>
         )}
       </div>
-      <style jsx>{`
+      <style>{`
         .product-description {
           word-wrap: break-word;
           overflow-wrap: break-word;

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { X, Upload, Calendar } from 'lucide-react';
 import { projectAPI } from '../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 const ProjectModal = ({ isOpen, onClose, onSubmit, editingProject, saving }) => {
   const [formData, setFormData] = useState({
     project_name: '',
     location: '',
     date: '',
+    description: '',
     image_url: '',
     display_order: ''
   });
@@ -21,6 +23,7 @@ const ProjectModal = ({ isOpen, onClose, onSubmit, editingProject, saving }) => 
         project_name: editingProject.project_name || '',
         location: editingProject.location || '',
         date: editingProject.date || '',
+        description: editingProject.description || '',
         image_url: editingProject.image_url || '',
         display_order: editingProject.display_order || ''
       });
@@ -35,6 +38,7 @@ const ProjectModal = ({ isOpen, onClose, onSubmit, editingProject, saving }) => 
       project_name: '',
       location: '',
       date: '',
+      description: '',
       image_url: '',
       display_order: ''
     });
@@ -110,12 +114,21 @@ const ProjectModal = ({ isOpen, onClose, onSubmit, editingProject, saving }) => 
         imageUrl = await projectAPI.uploadImage(imageFile);
       }
 
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('You must be logged in to create a project');
+      }
+
       const projectData = {
         project_name: formData.project_name.trim(),
         location: formData.location.trim(),
         date: formData.date,
+        description: formData.description.trim(),
         image_url: imageUrl,
-        display_order: formData.display_order ? parseInt(formData.display_order) : null
+        display_order: formData.display_order ? parseInt(formData.display_order) : null,
+        created_by: user.id
       };
 
       await onSubmit(projectData);
@@ -213,6 +226,22 @@ const ProjectModal = ({ isOpen, onClose, onSubmit, editingProject, saving }) => 
             {errors.date && (
               <p className="mt-1 text-sm text-red-600">{errors.date}</p>
             )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent outline-none resize-none"
+              placeholder="Enter project description..."
+              rows="4"
+              disabled={saving || uploading}
+            />
+            <p className="mt-1 text-sm text-gray-500">Optional: Brief description of the project</p>
           </div>
 
           {/* Display Order */}

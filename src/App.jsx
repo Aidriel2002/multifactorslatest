@@ -12,6 +12,7 @@ import {
   canManageProducts,
   isAdminOrStaff,
   canManageProjects,
+  canManageKanban,
 } from './utils/rbac'
 
 import PendingApproval from './pages/PendingApproval'
@@ -35,6 +36,7 @@ import ChatButton from './pages/landingpage/components/ChatButton'
 
 import ProductList from './pages/landingpage/list/ProductList'
 
+import KanbanBoard from './pages/kanban/KanbanBoard'
 
 import ReportDashboard from './pages/dictreport/ReportDashboard'
 import DowntimeList from './pages/dictreport/DowntimeList'
@@ -133,6 +135,15 @@ function App() {
             element={
               <SecureRoute requirePermission={canManageProjects}>
                 <ManageProject />
+              </SecureRoute>
+            }
+          />
+
+          <Route
+            path="/kanban"
+            element={
+              <SecureRoute requirePermission={canManageKanban}>
+                <KanbanBoard />
               </SecureRoute>
             }
           />

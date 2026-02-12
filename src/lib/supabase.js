@@ -352,15 +352,6 @@ export const quotationAPI = {
   }
 }
 
-export default {
-  supabase,
-  getCurrentUserProfile,
-  isUserApproved,
-  isAdmin,
-  productAPI,
-  quotationAPI
-}
-
 export const projectAPI = {
   async getAll() {
     const { data, error } = await supabase
@@ -368,8 +359,15 @@ export const projectAPI = {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error('Error fetching projects:', error);
+      throw error;
+    }
+    
+    if (data && data.length > 0) {
+      //
+    }
+    return data || [];
   },
 
   async getById(id) {
@@ -379,7 +377,11 @@ export const projectAPI = {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching project:', error);
+      throw error;
+    }
+    
     return data;
   },
 
@@ -387,10 +389,13 @@ export const projectAPI = {
     const { data, error } = await supabase
       .from('project')
       .insert([projectData])
-      .select()
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
     return data;
   },
 
@@ -399,10 +404,14 @@ export const projectAPI = {
       .from('project')
       .update(projectData)
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating project:', error);
+      throw error;
+    }
+    
     return data;
   },
 
@@ -413,19 +422,30 @@ export const projectAPI = {
       .eq('id', id)
       .single();
 
+    // Delete image from storage if exists
     if (project?.image_url) {
-      const imagePath = project.image_url.split('/').pop();
-      await supabase.storage
-        .from('project-images')
-        .remove([imagePath]);
+      try {
+        const path = project.image_url.split('/project-images/')[1];
+        if (path) {
+          await supabase.storage
+            .from('project-images')
+            .remove([path]);
+        }
+      } catch (err) {
+        console.error('Error deleting image:', err);
+      }
     }
 
+    // Delete project record
     const { error } = await supabase
       .from('project')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting project:', error);
+      throw error;
+    }
   },
 
   async uploadImage(file) {
@@ -440,7 +460,10 @@ export const projectAPI = {
         upsert: false
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      throw uploadError;
+    }
 
     const { data } = supabase.storage
       .from('project-images')
@@ -450,12 +473,22 @@ export const projectAPI = {
   },
 
   async deleteImage(imageUrl) {
-    const imagePath = imageUrl.split('/').pop();
-    const { error } = await supabase.storage
-      .from('project-images')
-      .remove([imagePath]);
+    try {
+      const path = imageUrl.split('/project-images/')[1];
+      if (path) {
+        const { error } = await supabase.storage
+          .from('project-images')
+          .remove([path]);
 
-    if (error) throw error;
+        if (error) {
+          console.error('Error deleting image:', error);
+          throw error;
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing image path:', err);
+      throw err;
+    }
   },
 
   subscribeToChanges(callback) {
@@ -468,3 +501,244 @@ export const projectAPI = {
       .subscribe();
   }
 };
+export const kanbanAPI = {
+  // Get all tasks
+  async getAllTasks() {
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .select(`
+        *,
+        assigned_user:users!kanban_tasks_assigned_to_fkey(id, name, email),
+        created_user:users!kanban_tasks_created_by_fkey(id, name, email)
+      `)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching tasks:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Get single task
+  async getTaskById(id) {
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .select(`
+        *,
+        assigned_user:users!kanban_tasks_assigned_to_fkey(id, name, email),
+        created_user:users!kanban_tasks_created_by_fkey(id, name, email)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching task:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Create task
+  async createTask(taskData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .insert([{
+        ...taskData,
+        created_by: user.id
+      }])
+      .select(`
+        *,
+        assigned_user:users!kanban_tasks_assigned_to_fkey(id, name, email),
+        created_user:users!kanban_tasks_created_by_fkey(id, name, email)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error creating task:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Update task
+  async updateTask(id, updates) {
+    const { data, error } = await supabase
+      .from('kanban_tasks')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        assigned_user:users!kanban_tasks_assigned_to_fkey(id, name, email),
+        created_user:users!kanban_tasks_created_by_fkey(id, name, email)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Delete task
+  async deleteTask(id) {
+    const { error } = await supabase
+      .from('kanban_tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting task:', error);
+      throw error;
+    }
+  },
+
+  // Update task status (for drag and drop)
+  async updateTaskStatus(id, status, displayOrder) {
+    const updates = { status };
+    if (displayOrder !== undefined) {
+      updates.display_order = displayOrder;
+    }
+
+    return await this.updateTask(id, updates);
+  },
+
+  // Get comments for a task
+  async getComments(taskId) {
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .select(`
+        *,
+        user:users(id, name, email)
+      `)
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching comments:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Add comment
+  async addComment(taskId, comment) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .insert([{
+        task_id: taskId,
+        user_id: user.id,
+        comment
+      }])
+      .select(`
+        *,
+        user:users(id, name, email)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error adding comment:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Update comment
+  async updateComment(id, comment) {
+    const { data, error } = await supabase
+      .from('kanban_comments')
+      .update({ comment })
+      .eq('id', id)
+      .select(`
+        *,
+        user:users(id, name, email)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error updating comment:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Delete comment
+  async deleteComment(id) {
+    const { error } = await supabase
+      .from('kanban_comments')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting comment:', error);
+      throw error;
+    }
+  },
+
+  // Get all users (for assignment)
+  async getAllUsers() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, role')
+      .eq('status', 'approved')
+      .in('role', ['admin', 'staff'])
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Subscribe to task changes
+  subscribeToTasks(callback) {
+    return supabase
+      .channel('kanban-tasks-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'kanban_tasks' },
+        callback
+      )
+      .subscribe();
+  },
+
+  // Subscribe to comment changes
+  subscribeToComments(taskId, callback) {
+    return supabase
+      .channel(`kanban-comments-${taskId}`)
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'kanban_comments',
+          filter: `task_id=eq.${taskId}`
+        },
+        callback
+      )
+      .subscribe();
+  }
+};
+
+export default {
+  supabase,
+  getCurrentUserProfile,
+  isUserApproved,
+  isAdmin,
+  productAPI,
+  quotationAPI,
+  projectAPI,
+  kanbanAPI 
+}

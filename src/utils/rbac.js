@@ -1,9 +1,13 @@
 import { supabase } from '../lib/supabase'
 
+/* =============================
+   CONSTANTS
+============================= */
+
 export const ROLES = {
   ADMIN: 'admin',
   STAFF: 'staff',
-  EMPLOYEE: 'employee'
+  USER: 'user'
 }
 
 export const STATUS = {
@@ -24,13 +28,17 @@ export const PERMISSION_TYPES = {
   ALL_ACCESS: 'all_access'
 }
 
+/* =============================
+   PERMISSION CACHE
+============================= */
+
 const permissionsCache = new Map()
-const CACHE_DURATION = 5 * 60 * 1000 
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export const getStaffPermissions = async (userId) => {
   const cacheKey = `permissions_${userId}`
   const cached = permissionsCache.get(cacheKey)
-  
+
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.permissions
   }
@@ -44,7 +52,7 @@ export const getStaffPermissions = async (userId) => {
     if (error) throw error
 
     const permissions = data?.map(p => p.permission) || []
-    
+
     permissionsCache.set(cacheKey, {
       permissions,
       timestamp: Date.now()
@@ -59,20 +67,23 @@ export const getStaffPermissions = async (userId) => {
 
 export const clearPermissionsCache = (userId) => {
   if (userId) {
-    const cacheKey = `permissions_${userId}`
-    permissionsCache.delete(cacheKey)
+    permissionsCache.delete(`permissions_${userId}`)
   } else {
     permissionsCache.clear()
   }
 }
 
+/* =============================
+   CORE PERMISSION HELPERS
+============================= */
+
 export const hasStaffPermission = async (userId, permission) => {
   const permissions = await getStaffPermissions(userId)
-  
+
   if (permissions.includes(PERMISSION_TYPES.ALL_ACCESS)) {
     return true
   }
-  
+
   return permissions.includes(permission)
 }
 
@@ -81,182 +92,174 @@ export const hasRole = (profile, allowedRoles) => {
   return allowedRoles.includes(profile.role)
 }
 
-export const isAdmin = (profile) => {
-  return hasRole(profile, [ROLES.ADMIN])
-}
+export const isAdmin = (profile) =>
+  hasRole(profile, [ROLES.ADMIN])
 
-export const isStaff = (profile) => {
-  return hasRole(profile, [ROLES.STAFF])
-}
+export const isStaff = (profile) =>
+  hasRole(profile, [ROLES.STAFF])
 
-export const isAdminOrStaff = (profile) => {
-  return hasRole(profile, [ROLES.ADMIN, ROLES.STAFF])
-}
+export const isAdminOrStaff = (profile) =>
+  hasRole(profile, [ROLES.ADMIN, ROLES.STAFF])
 
-export const isApproved = (profile) => {
-  return profile?.status === STATUS.APPROVED
-}
+export const isApproved = (profile) =>
+  profile?.status === STATUS.APPROVED
 
-export const canAccessBilling = async (profile) => {
+/* =============================
+   MODULE ACCESS CONTROLS
+============================= */
+
+const moduleAccess = async (profile, permissionType) => {
   if (!profile || profile.status !== STATUS.APPROVED) return false
-  
+
   if (profile.role === ROLES.ADMIN) return true
-  
+
   if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.BILLING)
+    return await hasStaffPermission(profile.id, permissionType)
   }
-  
+
   return false
 }
 
-export const canAccessContacts = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.CONTACTS)
+export const canAccessBilling = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.BILLING)
+
+export const canAccessContacts = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.CONTACTS)
+
+export const canAccessQuotations = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.QUOTATIONS)
+
+export const canAccessReports = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.REPORTS)
+
+export const canAccessProducts = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.PRODUCTS)
+
+export const canAccessProjects = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.PROJECTS)
+
+export const canAccessExpenses = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.EXPENSES)
+
+export const canAccessKanban = (profile) =>
+  moduleAccess(profile, PERMISSION_TYPES.KANBAN)
+
+/* =============================
+   MANAGEMENT CONTROLS
+============================= */
+
+export const canManageProducts = async (profile) =>
+  await canAccessProducts(profile)
+
+export const canManageProjects = async (profile) =>
+  await canAccessProjects(profile)
+
+export const canManageKanban = async (profile) =>
+  await canAccessKanban(profile)
+
+/* =============================
+   ADMIN-ONLY CONTROLS
+============================= */
+
+export const canDeleteRecords = (profile) =>
+  isAdmin(profile)
+
+export const canApproveUsers = (profile) =>
+  isAdmin(profile)
+
+export const canAccessAdminPanel = (profile) =>
+  isAdmin(profile)
+
+/* =============================
+   KANBAN TASK-LEVEL RULES
+============================= */
+
+export const canDeleteKanbanTask = (user) =>
+  user?.role === ROLES.ADMIN
+
+export const canEditKanbanTask = (user, task) => {
+  if (user?.role === ROLES.ADMIN) return true
+
+  if (user?.role === ROLES.STAFF) {
+    return (
+      task?.assigned_to === user?.id ||
+      task?.created_by === user?.id
+    )
   }
-  
+
   return false
 }
 
-export const canAccessQuotations = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.QUOTATIONS)
-  }
-  
-  return false
+export const canCommentOnTask = (user) =>
+  user?.role === ROLES.ADMIN ||
+  user?.role === ROLES.STAFF
+
+export const canDeleteComment = (user, comment) => {
+  if (user?.role === ROLES.ADMIN) return true
+  return comment?.user_id === user?.id
 }
 
-export const canAccessReports = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.REPORTS)
-  }
-  
-  return false
-}
-
-export const canAccessProducts = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.PRODUCTS)
-  }
-  
-  return false
-}
-
-export const canManageProducts = async (profile) => {
-  return await canAccessProducts(profile)
-}
-
-export const canManageProjects = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.PRODUCTS)
-  }
-  
-  return false
-}
-
-export const canAccessExpenses = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.EXPENSES)
-  }
-  
-  return false
-}
-
-export const canAccessKanban = async (profile) => {
-  if (!profile || profile.status !== STATUS.APPROVED) return false
-  
-  if (profile.role === ROLES.ADMIN) return true
-  
-  if (profile.role === ROLES.STAFF) {
-    return await hasStaffPermission(profile.id, PERMISSION_TYPES.KANBAN)
-  }
-  
-  return false
-}
-
-export const canManageKanban = async (profile) => {
-  return await canAccessKanban(profile)
-}
-
-export const canDeleteRecords = (profile) => {
-  return isAdmin(profile) 
-}
-
-export const canApproveUsers = (profile) => {
-  return isAdmin(profile) 
-}
-
-export const canAccessAdminPanel = (profile) => {
-  return isAdmin(profile)
-}
+/* =============================
+   PERMISSION MAP (For UI Use)
+============================= */
 
 export const permissions = {
+  // Billing
   viewBilling: canAccessBilling,
   createBilling: canAccessBilling,
   updateBilling: canAccessBilling,
-  deleteBilling: (profile) => isAdmin(profile),
-  
+  deleteBilling: isAdmin,
+
+  // Contacts
   viewContacts: canAccessContacts,
   createContact: canAccessContacts,
   updateContact: canAccessContacts,
-  deleteContact: (profile) => isAdmin(profile),
-  
+  deleteContact: isAdmin,
+
+  // Products
   viewProducts: canAccessProducts,
   createProduct: canManageProducts,
   updateProduct: canManageProducts,
-  deleteProduct: (profile) => isAdmin(profile),
-  
-  viewProjects: canManageProjects,
+  deleteProduct: isAdmin,
+
+  // Projects
+  viewProjects: canAccessProjects,
   createProject: canManageProjects,
   updateProject: canManageProjects,
-  deleteProject: (profile) => isAdmin(profile),
-  
+  deleteProject: isAdmin,
+
+  // Quotations
   viewQuotations: canAccessQuotations,
   createQuotation: canAccessQuotations,
   updateQuotation: canAccessQuotations,
-  deleteQuotation: (profile) => isAdmin(profile),
-  
+  deleteQuotation: isAdmin,
+
+  // Reports
   viewReports: canAccessReports,
   exportReports: canAccessReports,
-  
+
+  // Expenses
   viewExpenses: canAccessExpenses,
   createExpense: canAccessExpenses,
   updateExpense: canAccessExpenses,
-  deleteExpense: (profile) => isAdmin(profile),
-  
+  deleteExpense: isAdmin,
+
+  // Kanban
   viewKanban: canAccessKanban,
-  createKanban: (profile) => isAdmin(profile),
+  createKanban: isAdmin,
   updateKanban: canManageKanban,
-  deleteKanban: (profile) => isAdmin(profile),
-  
-  viewUsers: (profile) => isAdmin(profile),
-  approveUsers: (profile) => canApproveUsers(profile),
-  deleteUsers: (profile) => isAdmin(profile),
-  managePermissions: (profile) => isAdmin(profile)
+  deleteKanban: isAdmin,
+
+  // Users
+  viewUsers: isAdmin,
+  approveUsers: canApproveUsers,
+  deleteUsers: isAdmin,
+  managePermissions: isAdmin
 }
+
+/* =============================
+   GENERIC PERMISSION CHECKER
+============================= */
 
 export const checkPermission = async (profile, permissionFn) => {
   if (typeof permissionFn === 'function') {
