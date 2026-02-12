@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
@@ -7,14 +7,15 @@ import { PlusIcon, TrashIcon, CloudArrowUpIcon, XMarkIcon } from '@heroicons/rea
 import { usePageSecurity } from '../../../hooks/usePageSecurity';
 import { canAccessQuotations } from '../../../utils/rbac';
 
-function CreateQuotation1() {
+function EditQuotation2() {
   const { loading: securityLoading } = usePageSecurity(canAccessQuotations);
 
+  const { id } = useParams();
   const navigate = useNavigate();
   const preparedSigRef = useRef(null);
   const approvedSigRef = useRef(null);
 
-  const DRAFT_KEY = 'quotation1_draft';
+  const DRAFT_KEY = `quotation2_edit_draft_${id}`;
 
   const [formData, setFormData] = useState({
     referenceNumber: '',
@@ -22,7 +23,10 @@ function CreateQuotation1() {
     customerName: '',
     position: '',
     address: '',
-    subject: '',
+    greeting: '',
+    introduction: '',
+    scopeOfWork: '',
+    closingMessage: '',
     paymentTerms: '',
     preparedBy: '',
     preparedByDesignation: '',
@@ -32,130 +36,55 @@ function CreateQuotation1() {
     approvedBySignature: null
   });
 
-  const [items, setItems] = useState([
-    { description: '', quantity: '', unitPrice: '', total: 0 }
-  ]);
-
-  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]);
+  const [totalPrice, setTotalPrice] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [preparedSigPreview, setPreparedSigPreview] = useState(null);
   const [approvedSigPreview, setApprovedSigPreview] = useState(null);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
-  const [generatingRefNumber, setGeneratingRefNumber] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Generate reference number on component mount
   useEffect(() => {
-    const generateReferenceNumber = async () => {
-      try {
-        setGeneratingRefNumber(true);
-        
-        // Get the last quotation ordered by reference number (descending)
-        const { data, error } = await supabase
-          .from('quotations')
-          .select('reference_number')
-          .order('created_at', { ascending: false })
-          .limit(1);
+    fetchQuotation();
+  }, [id]);
 
-        if (error) throw error;
-
-        let nextNumber = 1; // Default if no quotations exist
-        
-        if (data && data.length > 0 && data[0].reference_number) {
-          // Parse the last reference number (format: Q-YYYY-NNNN)
-          const lastRefNumber = data[0].reference_number;
-          const parts = lastRefNumber.split('-');
-          
-          if (parts.length === 3) {
-            // Extract the sequential number (last part)
-            const lastSequentialNumber = parseInt(parts[2], 10);
-            nextNumber = lastSequentialNumber + 1;
-          }
+  // Auto-save draft whenever formData, items, or totalPrice change (after initial load)
+  useEffect(() => {
+    if (initialLoadComplete) {
+      const saveDraft = () => {
+        try {
+          const draft = {
+            formData,
+            items,
+            totalPrice,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (error) {
+          console.error('Error saving draft:', error);
         }
-        
-        // Get current year
-        const currentYear = new Date().getFullYear();
-        
-        // Format reference number: Q-YYYY-NNNN
-        const refNumber = `Q-${currentYear}-${nextNumber}`;
-        
-        setFormData(prev => ({ ...prev, referenceNumber: refNumber }));
-      } catch (error) {
-        console.error('Error generating reference number:', error);
-        alert('Error generating reference number. Please try refreshing the page.');
-      } finally {
-        setGeneratingRefNumber(false);
-      }
-    };
+      };
 
-    generateReferenceNumber();
-  }, []);
-
-  // Load draft on component mount
-  useEffect(() => {
-    const loadDraft = () => {
-      try {
-        const savedDraft = localStorage.getItem(DRAFT_KEY);
-        if (savedDraft) {
-          const draft = JSON.parse(savedDraft);
-          // Load all form data including reference number from draft
-          setFormData(draft.formData);
-          setItems(draft.items);
-          
-          // Restore signature previews
-          if (draft.formData.preparedBySignature) {
-            setPreparedSigPreview(draft.formData.preparedBySignature);
-          }
-          if (draft.formData.approvedBySignature) {
-            setApprovedSigPreview(draft.formData.approvedBySignature);
-          }
-          
-          setShowDraftBanner(true);
-        }
-      } catch (error) {
-        console.error('Error loading draft:', error);
-      }
-    };
-
-    loadDraft();
-  }, []);
-
-  // Auto-save draft whenever formData or items change
-  useEffect(() => {
-    const saveDraft = () => {
-      try {
-        const draft = {
-          formData,
-          items,
-          timestamp: new Date().toISOString()
-        };
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      } catch (error) {
-        console.error('Error saving draft:', error);
-      }
-    };
-
-    // Debounce the save to avoid too many writes
-    const timeoutId = setTimeout(saveDraft, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [formData, items]);
+      const timeoutId = setTimeout(saveDraft, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, items, totalPrice, initialLoadComplete]);
 
   // Warn user before leaving page if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Check if there's a draft (meaning there are unsaved changes)
       const savedDraft = localStorage.getItem(DRAFT_KEY);
-      if (savedDraft) {
+      if (savedDraft && initialLoadComplete) {
         e.preventDefault();
-        e.returnValue = ''; // Chrome requires returnValue to be set
-        return ''; // Some browsers show this message
+        e.returnValue = '';
+        return '';
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, []);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [initialLoadComplete]);
 
   const clearDraft = () => {
     try {
@@ -166,6 +95,99 @@ function CreateQuotation1() {
     }
   };
 
+  const handleClearDraft = async () => {
+    if (window.confirm('Are you sure you want to clear the saved draft and reload the original data?')) {
+      clearDraft();
+      setLoading(true);
+      setInitialLoadComplete(false);
+      await fetchQuotation();
+    }
+  };
+
+  const fetchQuotation = async () => {
+    try {
+      const { data: quotationData, error: quotationError } = await supabase
+        .from('quotations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (quotationError) throw quotationError;
+
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('quotation_items')
+        .select('*')
+        .eq('quotation_id', id)
+        .order('sort_order', { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+
+      if (savedDraft) {
+        try {
+          const draft = JSON.parse(savedDraft);
+          setFormData(draft.formData);
+          setItems(draft.items);
+          setTotalPrice(draft.totalPrice || '');
+
+          if (draft.formData.preparedBySignature) {
+            setPreparedSigPreview(draft.formData.preparedBySignature);
+          }
+          if (draft.formData.approvedBySignature) {
+            setApprovedSigPreview(draft.formData.approvedBySignature);
+          }
+
+          setShowDraftBanner(true);
+        } catch (error) {
+          console.error('Error loading draft:', error);
+          loadDatabaseData(quotationData, itemsData);
+        }
+      } else {
+        loadDatabaseData(quotationData, itemsData);
+      }
+
+      setInitialLoadComplete(true);
+    } catch (error) {
+      console.error('Error fetching quotation:', error);
+      alert('Error loading quotation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDatabaseData = (quotationData, itemsData) => {
+    setFormData({
+      referenceNumber: quotationData.reference_number,
+      companyName: quotationData.company_name || '',
+      customerName: quotationData.customer_name,
+      position: quotationData.position || '',
+      address: quotationData.address || '',
+      greeting: quotationData.greeting || '',
+      introduction: quotationData.introduction || '',
+      scopeOfWork: quotationData.scope_of_work || '',
+      closingMessage: quotationData.closing_message || '',
+      paymentTerms: quotationData.payment_terms || '',
+      preparedBy: quotationData.prepared_by || '',
+      preparedByDesignation: quotationData.prepared_by_designation || '',
+      approvedBy: quotationData.approved_by || '',
+      approvedByDesignation: quotationData.approved_by_designation || '',
+      preparedBySignature: quotationData.prepared_by_signature,
+      approvedBySignature: quotationData.approved_by_signature
+    });
+
+    setTotalPrice(quotationData.total_price?.toString() || '');
+    setPreparedSigPreview(quotationData.prepared_by_signature);
+    setApprovedSigPreview(quotationData.approved_by_signature);
+
+    setItems(itemsData.map(item => ({
+      id: item.id,
+      item: item.item_name || '',
+      quantity: item.quantity?.toString() || '',
+      description: item.description || ''
+    })));
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -174,18 +196,11 @@ function CreateQuotation1() {
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
-
-    if (field === 'quantity' || field === 'unitPrice') {
-      const qty = parseFloat(newItems[index].quantity) || 0;
-      const price = parseFloat(newItems[index].unitPrice) || 0;
-      newItems[index].total = qty * price;
-    }
-
     setItems(newItems);
   };
 
   const addItem = () => {
-    setItems([...items, { description: '', quantity: '', unitPrice: '', total: 0 }]);
+    setItems([...items, { item: '', quantity: '', description: '' }]);
   };
 
   const removeItem = (index) => {
@@ -194,7 +209,7 @@ function CreateQuotation1() {
     }
   };
 
-  const handleSignatureUpload = async (e, type) => {
+  const handleSignatureUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -211,18 +226,6 @@ function CreateQuotation1() {
     reader.readAsDataURL(file);
   };
 
-  const calculateSubtotal = () => {
-    return items.reduce((sum, item) => sum + (parseFloat(item.total) || 0), 0);
-  };
-
-  const calculateVAT = () => {
-    return calculateSubtotal() * 0.12;
-  };
-
-  const calculateGrandTotal = () => {
-    return calculateSubtotal() + calculateVAT();
-  };
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -232,44 +235,45 @@ function CreateQuotation1() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const { data: quotation, error: quotationError } = await supabase
+      const { error: quotationError } = await supabase
         .from('quotations')
-        .insert([{
-          quotation_type: 'quotation1',
-          reference_number: formData.referenceNumber,
+        .update({
           company_name: formData.companyName,
           customer_name: formData.customerName,
           position: formData.position,
           address: formData.address,
-          subject: formData.subject,
+          greeting: formData.greeting,
+          introduction: formData.introduction,
+          scope_of_work: formData.scopeOfWork,
+          closing_message: formData.closingMessage,
           payment_terms: formData.paymentTerms,
-          subtotal: calculateSubtotal(),
-          vat_amount: calculateVAT(),
-          grand_total: calculateGrandTotal(),
+          total_price: parseFloat(totalPrice) || 0,
           prepared_by: formData.preparedBy,
           prepared_by_designation: formData.preparedByDesignation,
           approved_by: formData.approvedBy || null,
           approved_by_designation: formData.approvedByDesignation || null,
           prepared_by_signature: formData.preparedBySignature,
-          approved_by_signature: formData.approvedBySignature || null,
-          created_by: user?.id
-        }])
-        .select()
-        .single();
+          approved_by_signature: formData.approvedBySignature || null
+        })
+        .eq('id', id);
 
       if (quotationError) throw quotationError;
 
+      const { error: deleteError } = await supabase
+        .from('quotation_items')
+        .delete()
+        .eq('quotation_id', id);
+
+      if (deleteError) throw deleteError;
+
       const itemsToInsert = items.map((item, index) => ({
-        quotation_id: quotation.id,
+        quotation_id: id,
+        item_name: item.item,
+        quantity: item.quantity,
         description: item.description,
-        quantity: parseFloat(item.quantity),
-        unit_price: parseFloat(item.unitPrice),
-        total: parseFloat(item.total),
         sort_order: index
       }));
 
@@ -279,119 +283,37 @@ function CreateQuotation1() {
 
       if (itemsError) throw itemsError;
 
-      // Clear draft after successful submission
       clearDraft();
 
-      alert('Quotation created successfully!');
-      navigate(`/quotation/view/${quotation.id}`);
+      alert('Quotation updated successfully!');
+      navigate(`/quotation/view/${id}`);
     } catch (error) {
-      console.error('Error creating quotation:', error);
-      alert('Error creating quotation: ' + error.message);
+      console.error('Error updating quotation:', error);
+      alert('Error updating quotation: ' + error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
-      // Clear the draft immediately and synchronously
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch (error) {
         console.error('Error clearing draft:', error);
       }
-      // Navigate back to quotation list
-      navigate('/quotation');
+      navigate(`/quotation/view/${id}`);
     }
   };
 
-  const handleClearDraft = async () => {
-    if (window.confirm('Are you sure you want to clear the saved draft? This cannot be undone.')) {
-      clearDraft();
-      
-      // Regenerate reference number
-      try {
-        setGeneratingRefNumber(true);
-        
-        // Get the last quotation ordered by reference number (descending)
-        const { data, error } = await supabase
-          .from('quotations')
-          .select('reference_number')
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) throw error;
-
-        let nextNumber = 1; // Default if no quotations exist
-        
-        if (data && data.length > 0 && data[0].reference_number) {
-          // Parse the last reference number (format: Q-YYYY-NNNN)
-          const lastRefNumber = data[0].reference_number;
-          const parts = lastRefNumber.split('-');
-          
-          if (parts.length === 3) {
-            // Extract the sequential number (last part)
-            const lastSequentialNumber = parseInt(parts[2], 10);
-            nextNumber = lastSequentialNumber + 1;
-          }
-        }
-        
-        const currentYear = new Date().getFullYear();
-        const refNumber = `Q-${currentYear}-${nextNumber}`;
-        
-        // Reset form with new reference number
-        setFormData({
-          referenceNumber: refNumber,
-          companyName: '',
-          customerName: '',
-          position: '',
-          address: '',
-          subject: '',
-          paymentTerms: '',
-          preparedBy: '',
-          preparedByDesignation: '',
-          approvedBy: '',
-          approvedByDesignation: '',
-          preparedBySignature: null,
-          approvedBySignature: null
-        });
-      } catch (error) {
-        console.error('Error regenerating reference number:', error);
-        setFormData({
-          referenceNumber: '',
-          companyName: '',
-          customerName: '',
-          position: '',
-          address: '',
-          subject: '',
-          paymentTerms: '',
-          preparedBy: '',
-          preparedByDesignation: '',
-          approvedBy: '',
-          approvedByDesignation: '',
-          preparedBySignature: null,
-          approvedBySignature: null
-        });
-      } finally {
-        setGeneratingRefNumber(false);
-      }
-      
-      setItems([{ description: '', quantity: '', unitPrice: '', total: 0 }]);
-      setPreparedSigPreview(null);
-      setApprovedSigPreview(null);
-    }
-  };
-
-  if (securityLoading || generatingRefNumber) {
+  if (loading || securityLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
         <QuotationSideBar />
-        <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">
-              {generatingRefNumber ? 'Generating reference number...' : 'Loading...'}
-            </p>
+            <p className="mt-4 text-gray-600">Loading...</p>
           </div>
         </div>
       </div>
@@ -402,9 +324,9 @@ function CreateQuotation1() {
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
       <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
-        <QuotationNavbar 
-          title="Create Quotation 1" 
-          subtitle="Fill in the quotation details"
+        <QuotationNavbar
+          title="Edit Quotation 2"
+          subtitle={`Reference: ${formData.referenceNumber}`}
         />
 
         {/* Draft Banner */}
@@ -416,7 +338,7 @@ function CreateQuotation1() {
               </svg>
               <div>
                 <p className="text-sm font-medium text-blue-900">Draft restored</p>
-                <p className="text-xs text-blue-700">Your previous work has been automatically loaded</p>
+                <p className="text-xs text-blue-700">Your previous edits have been automatically loaded</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -438,18 +360,18 @@ function CreateQuotation1() {
 
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
+
             {/* Auto-save indicator */}
             <div className="mb-4 flex justify-end">
-              <span className="text-xs text-gray-500 italic">
-                ✓ Auto-saving draft...
-              </span>
+              <span className="text-xs text-gray-500 italic">✓ Auto-saving draft...</span>
             </div>
 
+            {/* ── Quotation Information ── */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Quotation Information
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -459,15 +381,9 @@ function CreateQuotation1() {
                     type="text"
                     name="referenceNumber"
                     value={formData.referenceNumber}
-                    onChange={handleInputChange}
-                    required
                     readOnly
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
-                    placeholder="Q-2024-001"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
-                    Auto-generated reference number
-                  </p>
                 </div>
 
                 <div>
@@ -527,23 +443,61 @@ function CreateQuotation1() {
                     placeholder="Enter company address"
                   />
                 </div>
+              </div>
+            </div>
 
-                <div className="md:col-span-2">
+            {/* ── Letter Content ── */}
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
+                Letter Content
+              </h2>
+
+              <div className="space-y-6">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subject
+                    Greeting
+                  </label>
+                  <input
+                    type="text"
+                    name="greeting"
+                    value={formData.greeting}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="Dear Sir/Madam,"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Introduction
                   </label>
                   <textarea
-                    name="subject"
-                    value={formData.subject}
+                    name="introduction"
+                    value={formData.introduction}
                     onChange={handleInputChange}
                     rows="3"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                    placeholder="Enter subject"
+                    placeholder="We are pleased to offer to you our premium services..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <span className="font-bold italic">Scope of Work</span>
+                  </label>
+                  <textarea
+                    name="scopeOfWork"
+                    value={formData.scopeOfWork}
+                    onChange={handleInputChange}
+                    rows="5"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="Enter scope of work details..."
                   />
                 </div>
               </div>
             </div>
 
+            {/* ── Items ── */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Items</h2>
@@ -562,16 +516,13 @@ function CreateQuotation1() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                        Description
+                        Item
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-24">
                         Qty
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-32">
-                        Unit Price
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-32">
-                        Total
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                        Description
                       </th>
                       <th className="px-4 py-3 w-12"></th>
                     </tr>
@@ -580,41 +531,34 @@ function CreateQuotation1() {
                     {items.map((item, index) => (
                       <tr key={index}>
                         <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={item.item}
+                            onChange={(e) => handleItemChange(index, 'item', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            placeholder="Item name"
+                            required
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            placeholder="Qty"
+                            required
+                          />
+                        </td>
+                        <td className="px-4 py-3">
                           <textarea
                             value={item.description}
                             onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             rows="2"
-                            placeholder="Item description"
+                            placeholder="Description"
                             required
                           />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                            placeholder="0"
-                            required
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={item.unitPrice}
-                            onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                            placeholder="0.00"
-                            required
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-gray-900">
-                            {formatCurrency(item.total)}
-                          </div>
                         </td>
                         <td className="px-4 py-3">
                           {items.length > 1 && (
@@ -629,9 +573,41 @@ function CreateQuotation1() {
                         </td>
                       </tr>
                     ))}
+                    <tr className="bg-gray-50">
+                      <td colSpan="2" className="px-4 py-3 text-right font-semibold text-gray-900">
+                        Total Price:
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={totalPrice}
+                          onChange={(e) => setTotalPrice(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent font-semibold"
+                          placeholder="0.00"
+                          required
+                        />
+                      </td>
+                      <td className="px-4 py-3"></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
+            </div>
+
+            {/* ── Closing & Payment ── */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Closing Message
+              </label>
+              <textarea
+                name="closingMessage"
+                value={formData.closingMessage}
+                onChange={handleInputChange}
+                rows="4"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                placeholder="Enter closing message..."
+              />
             </div>
 
             <div className="mb-8">
@@ -648,28 +624,12 @@ function CreateQuotation1() {
               />
             </div>
 
-            <div className="mb-8 flex justify-end">
-              <div className="w-full md:w-1/2 lg:w-1/3 bg-gray-50 rounded-lg p-6 space-y-3">
-                <div className="flex justify-between text-gray-700">
-                  <span className="font-medium">Subtotal:</span>
-                  <span className="font-semibold">{formatCurrency(calculateSubtotal())}</span>
-                </div>
-                <div className="flex justify-between text-gray-700">
-                  <span className="font-medium">VAT (12%):</span>
-                  <span className="font-semibold">{formatCurrency(calculateVAT())}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t-2 border-gray-300">
-                  <span>Grand Total:</span>
-                  <span>{formatCurrency(calculateGrandTotal())}</span>
-                </div>
-              </div>
-            </div>
-
+            {/* ── Signatures ── */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Authorized Signatures
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -777,10 +737,10 @@ function CreateQuotation1() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={saving}
                 className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create Quotation'}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>
@@ -790,4 +750,4 @@ function CreateQuotation1() {
   );
 }
 
-export default CreateQuotation1;
+export default EditQuotation2;

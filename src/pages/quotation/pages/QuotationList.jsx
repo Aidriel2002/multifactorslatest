@@ -100,6 +100,12 @@ function QuotationList() {
     }
   };
 
+  const getEditPath = (quotation) => {
+    return quotation.quotation_type === 'quotation2'
+      ? `/quotation/edit2/${quotation.id}`
+      : `/quotation/edit/${quotation.id}`;
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
@@ -229,7 +235,11 @@ function QuotationList() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-semibold text-gray-900">
-                            {formatCurrency(quotation.grand_total)}
+                            {formatCurrency(
+                              quotation.quotation_type === 'quotation2'
+                                ? quotation.total_price
+                                : quotation.grand_total
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -250,7 +260,7 @@ function QuotationList() {
                               <EyeIcon className="h-5 w-5" />
                             </Link>
                             <Link
-                              to={`/quotation/edit/${quotation.id}`}
+                              to={getEditPath(quotation)}
                               className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                               title="Edit"
                             >

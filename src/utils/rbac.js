@@ -20,6 +20,7 @@ export const PERMISSION_TYPES = {
   PRODUCTS: 'products',
   PROJECTS: 'projects',
   EXPENSES: 'expenses',
+  KANBAN: 'kanban',
   ALL_ACCESS: 'all_access'
 }
 
@@ -184,6 +185,22 @@ export const canAccessExpenses = async (profile) => {
   return false
 }
 
+export const canAccessKanban = async (profile) => {
+  if (!profile || profile.status !== STATUS.APPROVED) return false
+  
+  if (profile.role === ROLES.ADMIN) return true
+  
+  if (profile.role === ROLES.STAFF) {
+    return await hasStaffPermission(profile.id, PERMISSION_TYPES.KANBAN)
+  }
+  
+  return false
+}
+
+export const canManageKanban = async (profile) => {
+  return await canAccessKanban(profile)
+}
+
 export const canDeleteRecords = (profile) => {
   return isAdmin(profile) 
 }
@@ -229,6 +246,11 @@ export const permissions = {
   createExpense: canAccessExpenses,
   updateExpense: canAccessExpenses,
   deleteExpense: (profile) => isAdmin(profile),
+  
+  viewKanban: canAccessKanban,
+  createKanban: (profile) => isAdmin(profile),
+  updateKanban: canManageKanban,
+  deleteKanban: (profile) => isAdmin(profile),
   
   viewUsers: (profile) => isAdmin(profile),
   approveUsers: (profile) => canApproveUsers(profile),

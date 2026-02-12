@@ -10,6 +10,7 @@ const PERMISSIONS = {
   reports: { label: 'DICT Reports', icon: '📈', description: 'View and generate reports' },
   products: { label: 'Landing Page Setup', icon: '⚙️', description: 'Manage Products and Projects page setup' },
   expenses: { label: 'Expenses', icon: '💸', description: 'Track and manage expenses' },
+  kanban: { label: 'Kanban', icon: '🗂️', description: 'Manage Kanban boards and tasks' },
 }
 
 const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {

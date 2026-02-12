@@ -75,20 +75,21 @@ function ViewQuotation() {
   };
 
   const hasApprovedBy = quotation?.approved_by || quotation?.approved_by_signature;
+  const isQuotation2 = quotation?.quotation_type === 'quotation2';
 
   if (loading || securityLoading) {
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <QuotationSideBar />
-      <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <QuotationSideBar />
+        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (!quotation) {
     return (
@@ -105,15 +106,15 @@ function ViewQuotation() {
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
       <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
-        <QuotationNavbar 
-          title="View Quotation" 
+        <QuotationNavbar
+          title="View Quotation"
           subtitle={`Reference: ${quotation.reference_number}`}
         />
 
         <div className="p-8">
           <div className="mb-6 flex justify-end space-x-4 print:hidden">
             <button
-              onClick={() => navigate(`/quotation/edit/${id}`)}
+              onClick={() => navigate(`/quotation/edit${isQuotation2 ? '2' : ''}/${id}`)}
               className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               <PencilIcon className="h-5 w-5 mr-2" />
@@ -129,175 +130,225 @@ function ViewQuotation() {
           </div>
 
           <div className="bg-white shadow-lg print:shadow-none max-w-4xl mx-auto pt-12 px-24">
+
             <div className="text-center mb-6 pb-6">
               {template?.header_image && (
-                <div className="-mb-3">
-                  <img 
-                    src={template.header_image} 
-                    alt="Company Logo" 
-                    className="h-24 object-contain mx-auto"
+                <div className="-mb-1">
+                  <img
+                    src={template.header_image}
+                    alt="Company Logo"
+                    className="h-16 object-contain mx-auto"
                   />
                 </div>
               )}
-              
               {template?.company_address && (
-                <p className="text-xs font-bold text-black -mb-1">{template.company_address}</p>
+                <p className="font-bold text-black -mb-1" style={{ fontSize: '10px'}} >{template.company_address}</p>
               )}
-              
-              <div className="text-xs font-bold text-black -mb-1">
+              <div className=" font-bold text-black -mb-1"style={{ fontSize: '10px'}}>
                 {template?.company_phone && <span>Contact No: {template.company_phone}</span>}<br />
               </div>
-              <div className="text-xs font-bold text-black -mb-8">
+              <div className=" font-bold text-black -mb-8" style={{ fontSize: '10px'}}>
                 {template?.company_email && <span>Email: {template.company_email}</span>}
               </div>
             </div>
 
-            <div className="text-right mb-4">  
-              <p className="text-black">Reference No: {quotation.reference_number}</p>
-              <p className="text-sm text-black -mt-1">Date: {formatDate(quotation.created_at)}</p>
+            <div className="text-right mb-4">
+              <p className="text-black" style={{ fontSize: '12px'}}>Reference No: {quotation.reference_number}</p>
+              <p className=" text-black -mt-1" style={{ fontSize: '12px'}}>Date: {formatDate(quotation.created_at)}</p>
             </div>
 
             <div className="mb-4">
-              <div>
-                <div className="">
-                  <div>
-                    <p className=" text-black -mb-1 font-semibold">{quotation.customer_name}</p>
-                  </div>
-                  {quotation.position && (
-                    <div>
-                      <p className=" text-black -mb-1">{quotation.position}</p>
-                    </div>
-                  )}
-                  {quotation.address && (
-                    <div>
-                      <p className=" text-black">{quotation.address}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {quotation.subject && (
-                <div>
-                  <p className="text-black text-sm uppercase mt-3">Subject: {quotation.subject}</p>
-                </div>
+              {isQuotation2 && quotation.company_name && (
+                <p className="text-black font-semibold"style={{ fontSize: '12px'}}>{quotation.company_name}</p>
+              )}
+              <p className="text-black -mb-1 font-semibold" style={{ fontSize: '12px'}}>{quotation.customer_name}</p>
+              {quotation.position && <p className="text-black -mb-1" style={{ fontSize: '12px'}}>{quotation.position}</p>}
+              {quotation.address && <p className="text-black" style={{ fontSize: '12px'}}>{quotation.address}</p>}
+
+              {!isQuotation2 && quotation.subject && (
+                <p className="text-black uppercase mt-3" style={{ fontSize: '12px'}}>Subject: {quotation.subject}</p>
               )}
             </div>
 
-            <div className="mb-5">
-              <table className="w-full overflow-hidden" style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid black', borderRadius: '3px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th className="px-3 py-1.5 text-left text-sm font-bold" style={{ borderBottom: '1px solid black', borderRight: '1px solid black' }}>Description</th>
-                    <th className="px-3 py-1.5 text-center text-sm font-bold w-20" style={{ borderBottom: '1px solid black', borderRight: '1px solid black' }}>Qty</th>
-                    <th className="px-3 py-1.5 text-right text-sm font-bold w-32" style={{ borderBottom: '1px solid black', borderRight: '1px solid black' }}>Unit Price</th>
-                    <th className="px-3 py-1.5 text-right text-sm font-bold w-32" style={{ borderBottom: '1px solid black' }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, index) => {
-                    const isLast = index === items.length - 1;
-                    const rowBorderBottom = isLast ? 'none' : '1px solid black';
-                    return (
-                      <tr key={item.id}>
-                        <td className="px-3 py-1.5 text-sm text-black" style={{ borderBottom: rowBorderBottom, borderRight: '1px solid black' }}>
-                          {item.description}
+            {isQuotation2 && (
+              <>
+                {quotation.greeting && (
+                  <p className="text-black mb-3" style={{ fontSize: '12px'}}>{quotation.greeting}</p>
+                )}
+
+                {quotation.introduction && (
+                  <p className="text-black mb-4" style={{ fontSize: '12px'}}>{quotation.introduction}</p>
+                )}
+
+                {quotation.scope_of_work && (
+                  <div className="mb-4">
+                    <p className="text-black font-bold italic mb-1" style={{ fontSize: '12px'}}>Scope of Work</p>
+                    <p className="text-black whitespace-pre-line" style={{ fontSize: '12px'}}>{quotation.scope_of_work}</p>
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <table
+                    className="w-full overflow-hidden"
+                    style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid black', borderRadius: '3px' }}
+                  >
+                    <thead>
+                      <tr style={{ backgroundColor: '#f9fafb' }}>
+                        <th className="px-3 py-1.5 text-left text-sm font-bold" style={{ borderBottom: '1px solid black', borderRight: '1px solid black',fontSize: '12px' }}>Item</th>
+                        <th className="px-3 py-1.5 text-center text-sm font-bold w-20" style={{ borderBottom: '1px solid black', borderRight: '1px solid black',fontSize: '12px' }}>Qty</th>
+                        <th className="px-3 py-1.5 text-left text-sm font-bold" style={{ borderBottom: '1px solid black',fontSize: '12px' }}>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => (
+                        <tr key={item.id}>
+                          <td className="px-3 py-1.5 text-sm text-black" style={{ borderBottom: '1px solid black', borderRight: '1px solid black',fontSize: '12px' }}>
+                            {item.item_name}
+                          </td>
+                          <td className="px-3 py-1.5 text-sm text-center text-black" style={{ borderBottom: '1px solid black', borderRight: '1px solid black',fontSize: '12px' }}>
+                            {item.quantity}
+                          </td>
+                          <td className="px-3 py-1.5 text-sm text-black whitespace-pre-line" style={{ borderBottom: '1px solid black',fontSize: '12px'  }}>
+                            {item.description}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr>
+                        <td colSpan={2} className="px-3 py-1.5 font-bold text-black" style={{ fontSize: '12px' }}>
+                          Total Price:
                         </td>
-                        <td className="px-3 py-1.5 text-sm text-center text-black" style={{ borderBottom: rowBorderBottom, borderRight: '1px solid black' }}>
-                          {item.quantity}
-                        </td>
-                        <td className="px-3 py-1.5 text-sm text-right text-black" style={{ borderBottom: rowBorderBottom, borderRight: '1px solid black' }}>
-                          {formatCurrency(item.unit_price)}
-                        </td>
-                        <td className="px-3 py-1.5 text-sm text-right font-semibold text-black" style={{ borderBottom: rowBorderBottom }}>
-                          {formatCurrency(item.total)}
+                        <td className="px-3 py-1.5 font-bold text-black text-right" style={{ fontSize: '12px' }}>
+                          {formatCurrency(quotation.total_price)}
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </tbody>
+                  </table>
+                </div>
 
-            {quotation.payment_terms && (
-              <div className="mb-8">
-                <p className=" text-black mb-2 text-sm">Payment Terms: {quotation.payment_terms}</p>
-              </div>
+                {quotation.closing_message && (
+                  <p className="text-black mb-4 whitespace-pre-line" style={{ fontSize: '12px' }}>{quotation.closing_message}</p>
+                )}
+
+                {quotation.payment_terms && (
+                  <p className="text-black mb-8" style={{ fontSize: '12px' }}>Payment Terms: {quotation.payment_terms}</p>
+                )}
+              </>
             )}
 
-            <div className="mb-8 space-y-3">
-              <div 
-                className="flex flex-col px-4 py-2"
-                style={{ 
-                  border: '1px solid rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                }}
-              >
-                <div className="flex justify-between">
-                    <span className=" text-black">Subtotal: </span>
-                    <span>{formatCurrency(quotation.subtotal)}</span>
+            {!isQuotation2 && (
+              <>
+                <div className="mb-4">
+                  <table
+                    className="w-full overflow-hidden"
+                    style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid black', borderRadius: '3px' }}
+                  >
+                    <thead>
+                      <tr style={{ backgroundColor: '#f9fafb' }}>
+                        <th className="px-3 py-1.5 text-left  font-bold" style={{ borderBottom: '1px solid black', borderRight: '1px solid black', fontSize:'12px' }}>Description</th>
+                        <th className="px-3 py-1.5 text-center  font-bold w-20" style={{ borderBottom: '1px solid black', borderRight: '1px solid black', fontSize:'12px' }}>Qty</th>
+                        <th className="px-3 py-1.5 text-right  font-bold w-32" style={{ borderBottom: '1px solid black', borderRight: '1px solid black', fontSize:'12px' }}>Unit Price</th>
+                        <th className="px-3 py-1.5 text-right font-bold w-32" style={{ borderBottom: '1px solid black', fontSize:'12px' }}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => {
+                        const isLast = index === items.length - 1;
+                        const rowBorder = isLast ? 'none' : '1px solid black';
+                        return (
+                          <tr key={item.id}>
+                            <td className="px-3 py-1.5 text-sm text-black" style={{ borderBottom: rowBorder, borderRight: '1px solid black', fontSize: '12px' }}>
+                              {item.description}
+                            </td>
+                            <td className="px-3 py-1.5 text-sm text-center text-black" style={{ borderBottom: rowBorder, borderRight: '1px solid black', fontSize: '12px' }}>
+                              {item.quantity}
+                            </td>
+                            <td className="px-3 py-1.5 text-sm text-right text-black" style={{ borderBottom: rowBorder, borderRight: '1px solid black', fontSize: '12px' }}>
+                              {formatCurrency(item.unit_price)}
+                            </td>
+                            <td className="px-3 py-1.5 text-sm text-right font-semibold text-black" style={{ borderBottom: rowBorder, fontSize: '12px' }}>
+                              {formatCurrency(item.total)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                <div className="flex justify-between">
-                    <span className=" text-black">VAT (12%):  </span>
-                    <span>{formatCurrency(quotation.vat_amount)}</span>
+                {quotation.payment_terms && (
+                  <div className="mb-8">
+                    <p className="text-black mb-2" style={{ fontSize: '12px' }}>Payment Terms: {quotation.payment_terms}</p>
+                  </div>
+                )}
+
+                <div className="mb-8 space-y-3">
+                  <div
+                    className="flex flex-col px-4 py-2"
+                    style={{ border: '1px solid rgba(0, 0, 0, 0.2)', borderRadius: '8px' }}
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-black" style={{ fontSize: '12px' }}>Subtotal:</span>
+                      <span style={{ fontSize: '12px' }}>{formatCurrency(quotation.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-black" style={{ fontSize: '12px' }}>VAT (12%):</span>
+                      <span style={{ fontSize: '12px' }}>{formatCurrency(quotation.vat_amount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xl font-bold text-green-950" style={{ fontSize: '12px' }}>Grand Total:</span>
+                      <span className="text-xl font-bold text-green-950" style={{ fontSize: '12px' }}>{formatCurrency(quotation.grand_total)}</span>
+                    </div>
+                  </div>
                 </div>
+              </>
+            )}
 
-                <div className="flex justify-between">
-                    <span className="text-xl font-bold text-green-950">Grand Total:  </span>
-                    <span className='text-xl font-bold text-green-950'>{formatCurrency(quotation.grand_total)}</span>
-                </div>
-
-              </div>
-            </div>
-
-            <div className={`mt-16 ${hasApprovedBy ? 'grid grid-cols-2 gap-8' : 'flex justify-start'}`}>
-              {/* Prepared By */}
+            <div className={`mt-16 pb-16 ${hasApprovedBy ? 'grid grid-cols-2 gap-8' : 'flex justify-start'}`}>
               <div className="text-center">
-                <p className="text-left text-sm text-black">Prepared By</p>
+                <p className="text-left text-black" style={{ fontSize: '12px' }}>Prepared By</p>
                 <div className="-mb-6 h-20 flex items-center justify-center">
                   {quotation.prepared_by_signature && (
-                    <img 
-                      src={quotation.prepared_by_signature} 
-                      alt="Prepared By Signature" 
+                    <img
+                      src={quotation.prepared_by_signature}
+                      alt="Prepared By Signature"
                       className="h-16 object-contain"
                     />
                   )}
                 </div>
                 <div style={{ borderBottom: '1pt solid black', paddingBottom: '0.25rem' }}>
-                  <p className="text-black">{quotation.prepared_by || '_________________'}</p>
+                  <p className="text-black" style={{ fontSize: '12px' }}>{quotation.prepared_by || '_________________'}</p>
                 </div>
                 {quotation.prepared_by_designation && (
-                  <p className="text-sm text-black mt-1">{quotation.prepared_by_designation}</p>
+                  <p className="text-black mt-1" style={{ fontSize: '12px' }}>{quotation.prepared_by_designation}</p>
                 )}
               </div>
 
-              {/* Approved By — only shown if there is input */}
               {hasApprovedBy && (
                 <div className="text-center">
-                  <p className="text-left text-sm text-black">Approved By</p>
+                  <p className="text-left text-black" style={{ fontSize: '12px' }}>Approved By</p>
                   <div className="-mb-6 h-20 flex items-center justify-center">
                     {quotation.approved_by_signature && (
-                      <img 
-                        src={quotation.approved_by_signature} 
-                        alt="Approved By Signature" 
+                      <img
+                        src={quotation.approved_by_signature}
+                        alt="Approved By Signature"
                         className="h-16 object-contain"
                       />
                     )}
                   </div>
                   <div style={{ borderBottom: '1pt solid black', paddingBottom: '0.25rem' }}>
-                    <p className="text-black">{quotation.approved_by || '_________________'}</p>
+                    <p className="text-black" style={{ fontSize: '12px' }}>{quotation.approved_by || '_________________'}</p>
                   </div>
                   {quotation.approved_by_designation && (
-                    <p className="text-sm text-black mt-1">{quotation.approved_by_designation}</p>
+                    <p className="text-black mt-1" style={{ fontSize: '12px' }}>{quotation.approved_by_designation}</p>
                   )}
                 </div>
               )}
             </div>
+
           </div>
         </div>
       </div>
 
-      {/* Print Styles */}
       <style>{`
         @media print {
           body * {
@@ -320,8 +371,6 @@ function ViewQuotation() {
             margin: 0;
             size: auto;
           }
-          
-          /* Remove browser default headers and footers */
           html, body {
             margin: 0 !important;
             padding: 0 !important;

@@ -50,7 +50,6 @@ export const AdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  // Redirect non-admin/staff users to /user
   if (profile.role !== 'admin' && profile.role !== 'staff') {
     return <Navigate to="/user" replace />
   }
@@ -85,7 +84,6 @@ export const StaffOrAdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  // Redirect non-admin/staff users to /user
   if (profile.role !== 'admin' && profile.role !== 'staff') {
     return <Navigate to="/user" replace />
   }
@@ -120,7 +118,6 @@ export const EmployeeRoute = ({ children }) => {
     return <Navigate to="/login" replace />
   }
 
-  // Redirect admin/staff users to /admin
   if (profile.role === 'admin' || profile.role === 'staff') {
     return <Navigate to="/admin" replace />
   }

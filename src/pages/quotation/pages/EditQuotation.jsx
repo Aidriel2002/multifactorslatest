@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import QuotationSideBar from '../components/QuotationSideBar';
 import QuotationNavbar from '../components/QuotationNavbar';
 import { supabase } from '../../../lib/supabase';
-import { PlusIcon, TrashIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, CloudArrowUpIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { usePageSecurity } from '../../../hooks/usePageSecurity';
 import { canAccessQuotations } from '../../../utils/rbac';
 
@@ -15,6 +15,8 @@ function EditQuotation() {
   const preparedSigRef = useRef(null);
   const approvedSigRef = useRef(null);
 
+  const DRAFT_KEY = `quotation_edit_draft_${id}`;
+
   const [formData, setFormData] = useState({
     referenceNumber: '',
     customerName: '',
@@ -23,7 +25,9 @@ function EditQuotation() {
     subject: '',
     paymentTerms: '',
     preparedBy: '',
+    preparedByDesignation: '',
     approvedBy: '',
+    approvedByDesignation: '',
     preparedBySignature: null,
     approvedBySignature: null
   });
@@ -33,10 +37,72 @@ function EditQuotation() {
   const [saving, setSaving] = useState(false);
   const [preparedSigPreview, setPreparedSigPreview] = useState(null);
   const [approvedSigPreview, setApprovedSigPreview] = useState(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   useEffect(() => {
     fetchQuotation();
   }, [id]);
+
+  // Auto-save draft whenever formData or items change (but only after initial load)
+  useEffect(() => {
+    if (initialLoadComplete) {
+      const saveDraft = () => {
+        try {
+          const draft = {
+            formData,
+            items,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (error) {
+          console.error('Error saving draft:', error);
+        }
+      };
+
+      // Debounce the save to avoid too many writes
+      const timeoutId = setTimeout(saveDraft, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, items, initialLoadComplete]);
+
+  // Warn user before leaving page if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Check if there's a draft (meaning there are unsaved changes)
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      if (savedDraft && initialLoadComplete) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        return ''; // Some browsers show this message
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [initialLoadComplete]);
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      setShowDraftBanner(false);
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  };
+
+  const handleClearDraft = async () => {
+    if (window.confirm('Are you sure you want to clear the saved draft and reload the original data?')) {
+      clearDraft();
+      // Reload original data
+      setLoading(true);
+      setInitialLoadComplete(false);
+      await fetchQuotation();
+    }
+  };
 
   const fetchQuotation = async () => {
     try {
@@ -56,35 +122,70 @@ function EditQuotation() {
 
       if (itemsError) throw itemsError;
 
-      setFormData({
-        referenceNumber: quotationData.reference_number,
-        customerName: quotationData.customer_name,
-        position: quotationData.position || '',
-        address: quotationData.address || '',
-        subject: quotationData.subject || '',
-        paymentTerms: quotationData.payment_terms || '',
-        preparedBy: quotationData.prepared_by || '',
-        approvedBy: quotationData.approved_by || '',
-        preparedBySignature: quotationData.prepared_by_signature,
-        approvedBySignature: quotationData.approved_by_signature
-      });
-
-      setPreparedSigPreview(quotationData.prepared_by_signature);
-      setApprovedSigPreview(quotationData.approved_by_signature);
-
-      setItems(itemsData.map(item => ({
-        id: item.id,
-        description: item.description,
-        quantity: item.quantity.toString(),
-        unitPrice: item.unit_price.toString(),
-        total: item.total
-      })));
+      // Check if draft exists and load it
+      const savedDraft = localStorage.getItem(DRAFT_KEY);
+      
+      if (savedDraft) {
+        // Load from draft
+        try {
+          const draft = JSON.parse(savedDraft);
+          setFormData(draft.formData);
+          setItems(draft.items);
+          
+          // Restore signature previews
+          if (draft.formData.preparedBySignature) {
+            setPreparedSigPreview(draft.formData.preparedBySignature);
+          }
+          if (draft.formData.approvedBySignature) {
+            setApprovedSigPreview(draft.formData.approvedBySignature);
+          }
+          
+          setShowDraftBanner(true);
+        } catch (error) {
+          console.error('Error loading draft:', error);
+          // If draft loading fails, use database data
+          loadDatabaseData(quotationData, itemsData);
+        }
+      } else {
+        // Load from database
+        loadDatabaseData(quotationData, itemsData);
+      }
+      
+      setInitialLoadComplete(true);
     } catch (error) {
       console.error('Error fetching quotation:', error);
       alert('Error loading quotation');
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadDatabaseData = (quotationData, itemsData) => {
+    setFormData({
+      referenceNumber: quotationData.reference_number,
+      customerName: quotationData.customer_name,
+      position: quotationData.position || '',
+      address: quotationData.address || '',
+      subject: quotationData.subject || '',
+      paymentTerms: quotationData.payment_terms || '',
+      preparedBy: quotationData.prepared_by || '',
+      preparedByDesignation: quotationData.prepared_by_designation || '',
+      approvedBy: quotationData.approved_by || '',
+      approvedByDesignation: quotationData.approved_by_designation || '',
+      preparedBySignature: quotationData.prepared_by_signature,
+      approvedBySignature: quotationData.approved_by_signature
+    });
+
+    setPreparedSigPreview(quotationData.prepared_by_signature);
+    setApprovedSigPreview(quotationData.approved_by_signature);
+
+    setItems(itemsData.map(item => ({
+      id: item.id,
+      description: item.description,
+      quantity: item.quantity.toString(),
+      unitPrice: item.unit_price.toString(),
+      total: item.total
+    })));
   };
 
   const handleInputChange = (e) => {
@@ -169,9 +270,11 @@ function EditQuotation() {
           vat_amount: calculateVAT(),
           grand_total: calculateGrandTotal(),
           prepared_by: formData.preparedBy,
-          approved_by: formData.approvedBy,
+          prepared_by_designation: formData.preparedByDesignation,
+          approved_by: formData.approvedBy || null,
+          approved_by_designation: formData.approvedByDesignation || null,
           prepared_by_signature: formData.preparedBySignature,
-          approved_by_signature: formData.approvedBySignature
+          approved_by_signature: formData.approvedBySignature || null
         })
         .eq('id', id);
 
@@ -199,6 +302,9 @@ function EditQuotation() {
 
       if (itemsError) throw itemsError;
 
+      // Clear draft after successful submission
+      clearDraft();
+
       alert('Quotation updated successfully!');
       navigate(`/quotation/view/${id}`);
     } catch (error) {
@@ -209,19 +315,32 @@ function EditQuotation() {
     }
   };
 
+  const handleCancel = () => {
+    if (window.confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
+      // Clear the draft immediately and synchronously
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch (error) {
+        console.error('Error clearing draft:', error);
+      }
+      // Navigate back to view page
+      navigate(`/quotation/view/${id}`);
+    }
+  };
+
   if (loading || securityLoading) {
-  return (
-    <div className="flex h-screen bg-gray-50">
-      <QuotationSideBar />
-      <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <QuotationSideBar />
+        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -232,8 +351,44 @@ function EditQuotation() {
           subtitle={`Reference: ${formData.referenceNumber}`}
         />
 
+        {/* Draft Banner */}
+        {showDraftBanner && (
+          <div className="mx-8 mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <svg className="h-5 w-5 text-blue-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-blue-900">Draft restored</p>
+                <p className="text-xs text-blue-700">Your previous edits have been automatically loaded</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleClearDraft}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear Draft
+              </button>
+              <button
+                onClick={() => setShowDraftBanner(false)}
+                className="text-blue-400 hover:text-blue-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
+            {/* Auto-save indicator */}
+            <div className="mb-4 flex justify-end">
+              <span className="text-xs text-gray-500 italic">
+                ✓ Auto-saving draft...
+              </span>
+            </div>
+
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Quotation Information
@@ -442,6 +597,18 @@ function EditQuotation() {
                     value={formData.preparedBy}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                    placeholder="Enter name"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Designation
+                  </label>
+                  <input
+                    type="text"
+                    name="preparedByDesignation"
+                    value={formData.preparedByDesignation}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                    placeholder="Enter designation"
                   />
                   <div>
                     <input
@@ -469,7 +636,7 @@ function EditQuotation() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Approved By
+                    Approved By <span className="text-gray-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -477,6 +644,18 @@ function EditQuotation() {
                     value={formData.approvedBy}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                    placeholder="Enter name"
+                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Designation <span className="text-gray-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="approvedByDesignation"
+                    value={formData.approvedByDesignation}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent mb-3"
+                    placeholder="Enter designation"
                   />
                   <div>
                     <input
@@ -507,7 +686,7 @@ function EditQuotation() {
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={() => navigate(`/quotation/view/${id}`)}
+                onClick={handleCancel}
                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel

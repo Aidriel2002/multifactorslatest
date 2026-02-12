@@ -42,6 +42,13 @@ const menuItemsConfig = [
   },
   { type: 'header', label: 'Integration' },
   {
+    label: 'Kanban',
+    path: '/kanban',
+    icon: '🗂️',
+    roles: ['admin', 'staff'],
+    requiresPermission: PERMISSION_TYPES.REPORTS
+  },
+  {
     label: 'DICT Reports',
     path: '/dictreport',
     icon: '📈',

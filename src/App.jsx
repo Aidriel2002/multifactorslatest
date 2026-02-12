@@ -11,7 +11,7 @@ import {
   canAccessReports,
   canManageProducts,
   isAdminOrStaff,
-  canManageProjects
+  canManageProjects,
 } from './utils/rbac'
 
 import PendingApproval from './pages/PendingApproval'
@@ -35,6 +35,7 @@ import ChatButton from './pages/landingpage/components/ChatButton'
 
 import ProductList from './pages/landingpage/list/ProductList'
 
+
 import ReportDashboard from './pages/dictreport/ReportDashboard'
 import DowntimeList from './pages/dictreport/DowntimeList'
 import NoUptimePage from './pages/dictreport/NoUptimePage'
@@ -51,8 +52,10 @@ import Project from './pages/quotation/pages/Project'
 import PurchaseOrder from './pages/quotation/pages/PurchaseOrder'
 import QuotationList from './pages/quotation/pages/QuotationList'
 import CreateQuotation1 from './pages/quotation/pages/CreateQuotation1'
+import CreateQuotation2 from './pages/quotation/pages/CreateQuotation2'
 import ViewQuotation from './pages/quotation/pages/ViewQuotation'
 import EditQuotation from './pages/quotation/pages/EditQuotation'
+import EditQuotation2 from './pages/quotation/pages/EditQuotation2'
 import EditPrintableTemplate from './pages/quotation/pages/EditPrintableTemplate'
 
 import ContactsDashboard from './pages/contacts/ContactsDashboard'
@@ -286,6 +289,14 @@ function App() {
             }
           />
           <Route
+            path="/quotation/create/quotation2"
+            element={
+              <SecureRoute requirePermission={canAccessQuotations}>
+                <CreateQuotation2 />
+              </SecureRoute>
+            }
+          />
+          <Route
             path="/quotation/view/:id"
             element={
               <SecureRoute requirePermission={canAccessQuotations}>
@@ -298,6 +309,14 @@ function App() {
             element={
               <SecureRoute requirePermission={canAccessQuotations}>
                 <EditQuotation />
+              </SecureRoute>
+            }
+          />
+          <Route
+            path="/quotation/edit2/:id"
+            element={
+              <SecureRoute requirePermission={canAccessQuotations}>
+                <EditQuotation2 />
               </SecureRoute>
             }
           />
