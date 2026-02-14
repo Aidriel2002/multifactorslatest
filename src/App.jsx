@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthProvider'
+import { useAuth } from './contexts/AuthContext'
+import {AuthProvider} from './contexts/AuthProvider'
 import { ProtectedRoute, AdminRoute, EmployeeRoute, StaffOrAdminRoute } from './components/ProtectedRoute'
 import { SecureRoute, AdminOnlyRoute, ApprovedOnlyRoute } from './components/SecureRoute'
 
@@ -65,6 +66,8 @@ import ContactsDashboard from './pages/contacts/ContactsDashboard'
 import ManageProduct from './pages/landingPageContent/ManageProducts'
 import ManageProject from './pages/landingPageContent/ManageProject'
 
+import AdminSidebar from './components/AdminSidebar'
+import EmployeeSidebar from './components/EmployeeSidebar'
 import AuthModal from './components/AuthModal'
 import AccountLogin from './components/AccountLogin'
 
@@ -115,243 +118,272 @@ const ConditionalChatButton = () => {
   return isPublicRoute ? <ChatButton /> : null
 }
 
+const AppLayoutWrapper = () => {
+  const location = useLocation()
+  const { profile } = useAuth()
+  
+  const publicRoutes = ['/', '/productlist', '/pending-approval', '/account-rejected', '/accountlogin']
+  const isPublicRoute = publicRoutes.includes(location.pathname)
+
+  // Hide global sidebar on pages with their own custom sidebar
+  const hideGlobalSidebar = 
+    location.pathname === '/kanban' || 
+    location.pathname === '/manageproject' || 
+    location.pathname === '/manageproduct'
+    
+
+  if (isPublicRoute || !profile || hideGlobalSidebar) {
+    return null
+  }
+
+  // Show AdminSidebar for admin and staff, EmployeeSidebar for user
+  const isAdminOrStaff = profile.role === 'admin' || profile.role === 'staff'
+  
+  return isAdminOrStaff ? <AdminSidebar /> : <EmployeeSidebar />
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/pending-approval" element={<PendingApproval />} />
-          <Route path="/account-rejected" element={<AccountRejected />} />
-          <Route path="/productlist" element={<ProductList />} />
-          <Route path="/accountlogin" element={<AccountLogin />} />
-          <Route
-            path="/user"
-            element={<EmployeeRoute><EmployeeDashboard /></EmployeeRoute>}
-          />
+        <div className="flex min-h-screen">
+          <AppLayoutWrapper />
+          <div className="flex-1">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
+              <Route path="/account-rejected" element={<AccountRejected />} />
+              <Route path="/productlist" element={<ProductList />} />
+              <Route path="/accountlogin" element={<AccountLogin />} />
+              <Route
+                path="/user"
+                element={<EmployeeRoute><EmployeeDashboard /></EmployeeRoute>}
+              />
 
-          <Route
-            path="/manageproject"
-            element={
-              <SecureRoute requirePermission={canManageProjects}>
-                <ManageProject />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/manageproject"
+                element={
+                  <SecureRoute requirePermission={canManageProjects}>
+                    <ManageProject />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/kanban"
-            element={
-              <SecureRoute requirePermission={canManageKanban}>
-                <KanbanBoard />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/kanban"
+                element={
+                  <SecureRoute requirePermission={canManageKanban}>
+                    <KanbanBoard />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/admin"
-            element={
-              <SecureRoute requirePermission={isAdminOrStaff}>
-                <AdminLayout />
-              </SecureRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route 
-              path="approval" 
-              element={
-                <AdminOnlyRoute>
-                  <ApprovalPage />
-                </AdminOnlyRoute>
-              } 
-            />
-            <Route path="system" element={<div className="p-6">System Settings</div>} />
-          </Route>
+              <Route
+                path="/admin"
+                element={
+                  <SecureRoute requirePermission={isAdminOrStaff}>
+                    <AdminLayout />
+                  </SecureRoute>
+                }
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route 
+                  path="approval" 
+                  element={
+                    <AdminOnlyRoute>
+                      <ApprovalPage />
+                    </AdminOnlyRoute>
+                  } 
+                />
+                <Route path="system" element={<div className="p-6">System Settings</div>} />
+              </Route>
 
-          <Route
-            path="/billings"
-            element={
-              <SecureRoute requirePermission={canAccessBilling}>
-                <BillingDashboard />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/providers"
-            element={
-              <SecureRoute requirePermission={canAccessBilling}>
-                <Providers />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/paybill"
-            element={
-              <SecureRoute requirePermission={canAccessBilling}>
-                <ToPayBill />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/logs"
-            element={
-              <SecureRoute requirePermission={canAccessBilling}>
-                <ActivityLogs />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/payments"
-            element={
-              <SecureRoute requirePermission={canAccessBilling}>
-                <PaymentHistory />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/billings"
+                element={
+                  <SecureRoute requirePermission={canAccessBilling}>
+                    <BillingDashboard />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/providers"
+                element={
+                  <SecureRoute requirePermission={canAccessBilling}>
+                    <Providers />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/paybill"
+                element={
+                  <SecureRoute requirePermission={canAccessBilling}>
+                    <ToPayBill />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/logs"
+                element={
+                  <SecureRoute requirePermission={canAccessBilling}>
+                    <ActivityLogs />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/payments"
+                element={
+                  <SecureRoute requirePermission={canAccessBilling}>
+                    <PaymentHistory />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/contacts/dashboard"
-            element={
-              <SecureRoute requirePermission={canAccessContacts}>
-                <ContactsDashboard />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/contacts/dashboard"
+                element={
+                  <SecureRoute requirePermission={canAccessContacts}>
+                    <ContactsDashboard />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/dictreport"
-            element={
-              <SecureRoute requirePermission={canAccessReports}>
-                <ReportDashboard />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/downtime-list"
-            element={
-              <SecureRoute requirePermission={canAccessReports}>
-                <DowntimeList />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/no-uptime"
-            element={
-              <SecureRoute requirePermission={canAccessReports}>
-                <NoUptimePage />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/escalation"
-            element={
-              <SecureRoute requirePermission={canAccessReports}>
-                <EscalationReport />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/dictreport"
+                element={
+                  <SecureRoute requirePermission={canAccessReports}>
+                    <ReportDashboard />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/downtime-list"
+                element={
+                  <SecureRoute requirePermission={canAccessReports}>
+                    <DowntimeList />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/no-uptime"
+                element={
+                  <SecureRoute requirePermission={canAccessReports}>
+                    <NoUptimePage />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/escalation"
+                element={
+                  <SecureRoute requirePermission={canAccessReports}>
+                    <EscalationReport />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/quotation"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <QuotationDashboard />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/project"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <Project />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/purchase-order"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <PurchaseOrder />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotationlist"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <QuotationList />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/editprintable"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <EditPrintableTemplate />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotation/create/quotation1"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <CreateQuotation1 />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotation/create/quotation2"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <CreateQuotation2 />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotation/view/:id"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <ViewQuotation />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotation/edit/:id"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <EditQuotation />
-              </SecureRoute>
-            }
-          />
-          <Route
-            path="/quotation/edit2/:id"
-            element={
-              <SecureRoute requirePermission={canAccessQuotations}>
-                <EditQuotation2 />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/quotation"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <QuotationDashboard />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/project"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <Project />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/purchase-order"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <PurchaseOrder />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotationlist"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <QuotationList />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/editprintable"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <EditPrintableTemplate />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotation/create/quotation1"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <CreateQuotation1 />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotation/create/quotation2"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <CreateQuotation2 />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotation/view/:id"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <ViewQuotation />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotation/edit/:id"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <EditQuotation />
+                  </SecureRoute>
+                }
+              />
+              <Route
+                path="/quotation/edit2/:id"
+                element={
+                  <SecureRoute requirePermission={canAccessQuotations}>
+                    <EditQuotation2 />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/manageproduct"
-            element={
-              <SecureRoute requirePermission={canManageProducts}>
-                <ManageProduct />
-              </SecureRoute>
-            }
-          />
+              <Route
+                path="/manageproduct"
+                element={
+                  <SecureRoute requirePermission={canManageProducts}>
+                    <ManageProduct />
+                  </SecureRoute>
+                }
+              />
 
-          <Route
-            path="/settings"
-            element={
-              <ApprovedOnlyRoute>
-                <AccountSettings />
-              </ApprovedOnlyRoute>
-            }
-          />
+              <Route
+                path="/settings"
+                element={
+                  <ApprovedOnlyRoute>
+                    <AccountSettings />
+                  </ApprovedOnlyRoute>
+                }
+              />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </div>
         
         <ConditionalChatButton />
       </AuthProvider>

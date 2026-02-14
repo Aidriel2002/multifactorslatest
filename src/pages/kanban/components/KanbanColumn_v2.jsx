@@ -105,7 +105,12 @@ const KanbanColumn = ({
           {task.assigned_user && (
             <span className="flex items-center gap-1 text-gray-500">
               <User className="w-3 h-3" />
-              {task.assigned_user}
+              {/* FIX: Access the name property instead of rendering the object */}
+              <span className="truncate max-w-[100px]">
+                {typeof task.assigned_user === 'object' 
+                  ? task.assigned_user.name 
+                  : task.assigned_user}
+              </span>
             </span>
           )}
         </div>

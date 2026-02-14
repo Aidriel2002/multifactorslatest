@@ -1,14 +1,11 @@
 import { useAuth } from '../../contexts/AuthContext'
-import EmployeeSidebar from '../../components/EmployeeSidebar'
 
 const EmployeeDashboard = () => {
   const { profile } = useAuth()
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <EmployeeSidebar />
-      
-      <div className="flex-1 ml-64 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>

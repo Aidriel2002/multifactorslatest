@@ -1,87 +1,268 @@
-import { LayoutDashboard, Building2, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Kanban,
+  Users,
+  ChevronRight,
+  ChevronDown,
+  X
+} from 'lucide-react';
 
-const LeftSidebar = ({ activeView, onViewChange, branches = [] }) => {
-  const menuItems = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      count: null
-    },
-    {
-      id: 'companies',
-      label: 'Company List',
-      icon: Building2,
-      count: branches.length
-    }
-  ];
+const LeftSidebar = ({ 
+  activeView, 
+  onViewChange, 
+  branches,
+  currentUser,
+  onSelectBranch,
+  onStaffListClick
+}) => {
+  const [expandedBranches, setExpandedBranches] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const isAdmin = currentUser?.role === 'admin';
+  const isStaff = currentUser?.role === 'staff';
+
+  const toggleBranches = () => {
+    setExpandedBranches(!expandedBranches);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleNavClick = (callback) => {
+    callback();
+    setIsMobileMenuOpen(false);
+  };
+
+  const NavItem = ({ icon: Icon, label, view, active, onClick }) => (
+    <button
+      onClick={() => handleNavClick(onClick)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+        active
+          ? 'bg-blue-600 text-white shadow-md'
+          : 'text-gray-700 hover:bg-gray-100'
+      }`}
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-semibold">{label}</span>
+    </button>
+  );
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      {/* Logo/Header */}
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">Kanban System</h1>
-        <p className="text-xs text-gray-500 mt-1">Task Management</p>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .burger-menu {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 2rem;
+            height: 2rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            z-index: 10;
+          }
+
+          .burger-menu span {
+            width: 2rem;
+            height: 0.25rem;
+            background: #1f2937;
+            border-radius: 10px;
+            transition: all 0.3s linear;
+            position: relative;
+            transform-origin: 1px;
+          }
+
+          .burger-menu.open span:first-child {
+            transform: rotate(45deg);
+          }
+
+          .burger-menu.open span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+
+          .burger-menu.open span:nth-child(3) {
+            transform: rotate(-45deg);
+          }
+
+          .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+          }
+
+          .mobile-overlay.open {
+            display: block;
+          }
+
+          .sidebar-mobile {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            height: 100vh;
+            width: 16rem;
+            background: white;
+            transition: left 0.3s ease-in-out;
+            z-index: 50;
+          }
+
+          .sidebar-mobile.open {
+            left: 0;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .burger-menu {
+            display: none;
+          }
+
+          .mobile-overlay {
+            display: none !important;
+          }
+
+          .sidebar-mobile {
+            position: relative;
+            left: 0;
+            width: 16rem;
+          }
+        }
+      `}</style>
+
+      {/* Mobile Burger Menu */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
+        <button 
+          className={`burger-menu ${isMobileMenuOpen ? 'open' : ''}`}
+          onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="flex-1 p-4">
-        <div className="space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeView === item.id;
+      {/* Mobile Overlay */}
+      <div 
+        className={`mobile-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={toggleMobileMenu}
+      />
 
-            return (
+      {/* Sidebar */}
+      <div className={`sidebar-mobile ${isMobileMenuOpen ? 'open' : ''} bg-white border-r border-gray-200 flex flex-col h-screen`}>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-black text-gray-900">
+                {isAdmin ? 'Multifactors Sales' : 'Multifactors Sales'}
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {currentUser?.full_name}
+              </p>
+            </div>
+            <button 
+              onClick={toggleMobileMenu}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {/* Dashboard */}
+          <NavItem
+            icon={LayoutDashboard}
+            label="Dashboard"
+            view="dashboard"
+            active={activeView === 'dashboard'}
+            onClick={() => onViewChange('dashboard')}
+          />
+
+          {/* Admin Only: Companies/Branches List */}
+          {isAdmin && (
+            <NavItem
+              icon={Building2}
+              label="Branches"
+              view="companies"
+              active={activeView === 'companies'}
+              onClick={() => onViewChange('companies')}
+            />
+          )}
+
+          {/* Admin Only: Staff Management */}
+          {isAdmin && (
+            <NavItem
+              icon={Users}
+              label="Staff"
+              view="staff"
+              active={activeView === 'staff'}
+              onClick={onStaffListClick}
+            />
+          )}
+
+          {/* Branches Section */}
+          {branches.length > 0 && (
+            <div className="pt-4">
               <button
-                key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={`
-                  w-full flex items-center justify-between px-4 py-3 rounded-lg
-                  transition-all duration-200 group
-                  ${isActive 
-                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
-                    : 'text-gray-700 hover:bg-gray-50'
-                  }
-                `}
+                onClick={toggleBranches}
+                className="w-full flex items-center justify-between px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} />
-                  <span className={`font-medium ${isActive ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {item.label}
-                  </span>
-                </div>
                 <div className="flex items-center gap-2">
-                  {item.count !== null && (
-                    <span className={`
-                      text-xs font-semibold px-2 py-0.5 rounded-full
-                      ${isActive 
-                        ? 'bg-blue-200 text-blue-800' 
-                        : 'bg-gray-200 text-gray-600'
-                      }
-                    `}>
-                      {item.count}
-                    </span>
-                  )}
-                  <ChevronRight 
-                    className={`
-                      w-4 h-4 transition-transform
-                      ${isActive ? 'text-blue-600 translate-x-1' : 'text-gray-400 opacity-0 group-hover:opacity-100'}
-                    `} 
-                  />
+                  <Kanban className="w-4 h-4" />
+                  <span>{isStaff ? 'My Boards' : 'Branches'}</span>
                 </div>
+                {expandedBranches ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
               </button>
-            );
-          })}
-        </div>
-      </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 text-center">
-          <p>© 2024 Kanban System</p>
+              {expandedBranches && (
+                <div className="mt-2 space-y-1 pl-2">
+                  {branches.map(branch => (
+                    <button
+                      key={branch.id}
+                      onClick={() => handleNavClick(() => onSelectBranch(branch))}
+                      className={`w-full text-left px-4 py-2 rounded-lg text-sm transition-colors ${
+                        activeView === 'board' 
+                          ? 'bg-blue-50 text-blue-700 font-semibold' 
+                          : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        <span className="truncate">{branch.name}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="text-xs text-gray-500 text-center">
+            {isAdmin ? 'Administrator' : 'Staff Member'}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

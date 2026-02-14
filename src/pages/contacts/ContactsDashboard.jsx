@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { usePageSecurity } from '../../hooks/usePageSecurity'
 import { canAccessContacts } from '../../utils/rbac'
-import AdminSidebar from '../../components/AdminSidebar'
 import AddContactModal from './components/AddContact'
 
 const useIsDesktop = () => {
@@ -250,9 +249,7 @@ const ContactsDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <AdminSidebar />
-
-      <div style={{ marginLeft: isDesktop ? '256px' : '0' }} className="min-h-screen transition-all">
+      <div className="min-h-screen transition-all">
 
         <div className="bg-white shadow sticky top-0 z-10">
           <div className="px-4 py-3" style={{ paddingTop: isDesktop ? '1rem' : '4rem', paddingLeft: isDesktop ? '1.5rem' : '1rem', paddingRight: isDesktop ? '1rem' : '1rem' }}>

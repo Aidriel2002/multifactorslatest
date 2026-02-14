@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { 
+  LayoutDashboard,
+  ChevronDown,
+  X,
+  LogOut,
+  User
+} from 'lucide-react'
 
 const employeeMenuItems = [
-  { label: 'Dashboard', path: '/user', icon: '📊' },
+  { label: 'Dashboard', path: '/user', icon: LayoutDashboard },
 ]
 
 const EmployeeSidebar = () => {
@@ -11,119 +18,288 @@ const EmployeeSidebar = () => {
   const navigate = useNavigate()
   const { profile, signOut } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [isMobileMenuOpen])
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [location.pathname])
 
   const handleSignOut = async () => {
+    setIsMobileMenuOpen(false)
     await signOut()
     navigate('/login')
   }
 
   const isActive = (path) => location.pathname === path
 
-  return (
-    <div className="flex flex-col h-screen bg-green-900 text-white w-64 fixed left-0 top-0">
-      <div className="p-4 border-b border-green-700">
-        <h1 className="text-xl font-bold">Multifactors Sales</h1>
-      </div>
-      
-      <nav className="flex-1 overflow-y-auto py-4">
-        {employeeMenuItems.map((item, index) => (
-          <Link
-            key={index}
-            to={item.path}
-            className={`flex items-center px-4 py-3 mx-2 rounded-lg transition-colors ${
-              isActive(item.path)
-                ? 'bg-green-600 text-white'
-                : 'text-gray-300 hover:bg-green-800 hover:text-white'
-            }`}
-          >
-            <span className="text-xl mr-3">{item.icon}</span>
-            <span className="font-medium">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen)
+  }
 
-      <div className="border-t border-green-700 p-4">
-        <div className="relative">
+  const handleNavClick = (callback) => {
+    callback()
+    setIsMobileMenuOpen(false)
+    setShowUserMenu(false)
+  }
+
+  const NavItem = ({ icon: Icon, label, path, active, onClick }) => (
+    <Link
+      to={path}
+      onClick={() => handleNavClick(onClick)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+        active
+          ? 'bg-green-600 text-white shadow-md'
+          : 'text-gray-700 hover:bg-gray-100'
+      }`}
+    >
+      <Icon className="w-5 h-5" />
+      <span className="font-semibold">{label}</span>
+    </Link>
+  )
+
+  return (
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .burger-menu {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 2rem;
+            height: 2rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            z-index: 10;
+          }
+
+          .burger-menu span {
+            width: 2rem;
+            height: 0.25rem;
+            background: #1f2937;
+            border-radius: 10px;
+            transition: all 0.3s linear;
+            position: relative;
+            transform-origin: 1px;
+          }
+
+          .burger-menu.open span:first-child {
+            transform: rotate(45deg);
+          }
+
+          .burger-menu.open span:nth-child(2) {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+
+          .burger-menu.open span:nth-child(3) {
+            transform: rotate(-45deg);
+          }
+
+          .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+          }
+
+          .mobile-overlay.open {
+            display: block;
+          }
+
+          .sidebar-mobile {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            height: 100vh;
+            width: 16rem;
+            background: white;
+            transition: left 0.3s ease-in-out;
+            z-index: 50;
+          }
+
+          .sidebar-mobile.open {
+            left: 0;
+          }
+        }
+
+        @media (min-width: 769px) {
+          .burger-menu {
+            display: none;
+          }
+
+          .mobile-overlay {
+            display: none !important;
+          }
+
+          .sidebar-mobile {
+            position: relative;
+            left: 0;
+            width: 16rem;
+          }
+        }
+
+        .user-menu-dropdown {
+          position: absolute;
+          bottom: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          margin-bottom: 0.5rem;
+          overflow: hidden;
+        }
+
+        .dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          width: 100%;
+          padding: 0.75rem 1rem;
+          text-align: left;
+          color: #374151;
+          background: white;
+          border: none;
+          cursor: pointer;
+          transition: background-color 0.2s;
+          text-decoration: none;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f3f4f6;
+        }
+
+        .dropdown-item.logout {
+          color: #dc2626;
+        }
+
+        .dropdown-item.logout:hover {
+          background-color: #fee2e2;
+        }
+      `}</style>
+
+      {/* Mobile Burger Menu */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
+        <button 
+          className={`burger-menu ${isMobileMenuOpen ? 'open' : ''}`}
+          onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+
+      {/* Mobile Overlay */}
+      <div 
+        className={`mobile-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={toggleMobileMenu}
+      />
+
+      {/* Sidebar */}
+      <div className={`sidebar-mobile ${isMobileMenuOpen ? 'open' : ''} bg-white border-r border-gray-200 flex flex-col h-screen`}>
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-black text-gray-900">
+                Multifactors Sales
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                {profile?.full_name}
+              </p>
+            </div>
+            <button 
+              onClick={toggleMobileMenu}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {employeeMenuItems.map((item, index) => (
+            <NavItem
+              key={index}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              active={isActive(item.path)}
+              onClick={() => {}}
+            />
+          ))}
+        </div>
+
+        {/* Footer - User Menu */}
+        <div className="p-4 border-t border-gray-200 relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-green-800 transition-colors"
+            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white font-bold mr-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-700">
               {profile?.full_name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-white">{profile?.full_name}</p>
-              <p className="text-xs text-green-400 capitalize">{profile?.role}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {profile?.full_name}
+              </p>
+              <p className="text-xs text-gray-500 capitalize">
+                {profile?.role}
+              </p>
             </div>
-            <svg
-              className={`w-5 h-5 text-green-400 transition-transform ${
+            <ChevronDown 
+              className={`w-5 h-5 text-gray-400 transition-transform ${
                 showUserMenu ? 'rotate-180' : ''
               }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            />
           </button>
 
           {showUserMenu && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-green-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="user-menu-dropdown">
               <Link
                 to="/settings"
-                onClick={() => setShowUserMenu(false)}
-                className="flex items-center px-4 py-3 hover:bg-green-700 transition-colors"
+                onClick={() => {
+                  setShowUserMenu(false)
+                  setIsMobileMenuOpen(false)
+                }}
+                className="dropdown-item"
               >
-                <svg
-                  className="w-5 h-5 mr-3 text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                <span className="text-sm">Account Settings</span>
+                <User className="w-4 h-4" />
+                <span>Account Settings</span>
               </Link>
               <button
                 onClick={handleSignOut}
-                className="flex items-center w-full px-4 py-3 hover:bg-green-700 transition-colors text-left text-red-400 hover:text-red-300"
+                className="dropdown-item logout"
               >
-                <svg
-                  className="w-5 h-5 mr-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                <span className="text-sm">Logout</span>
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
               </button>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

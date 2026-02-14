@@ -171,7 +171,7 @@ const ManageProduct = () => {
     <div className="flex h-screen bg-gray-100">
       <LandingSideBar />
 
-      <div className="flex-1 ml-0 md:ml-64 overflow-y-auto">
+      <div className="flex-1 ml-0 overflow-y-auto">
         <div className="bg-white shadow">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">

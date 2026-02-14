@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { usePageSecurity } from '../../hooks/usePageSecurity'
 import { canApproveUsers, clearPermissionsCache } from '../../utils/rbac'
 import { supabase } from '../../lib/supabase'
-import AdminSidebar from '../../components/AdminSidebar'
 import StaffPermissionsModal from '../../components/StaffPermissionsModal'
 
 const useIsDesktop = () => {
@@ -141,10 +140,9 @@ const ApprovalPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <AdminSidebar />
+      {/* Removed AdminSidebar - it should be in your App.jsx or layout component */}
 
-      <div style={{ marginLeft: isDesktop ? '0' : '0' }} className="min-h-screen transition-all">
-
+      <div className="min-h-screen transition-all">
         <div
           className="bg-white shadow px-4 py-3 sticky top-0 z-10"
           style={{ paddingTop: isDesktop ? '1rem' : '4rem', paddingLeft: isDesktop ? '1.5rem' : '1rem', paddingRight: isDesktop ? '1.5rem' : '1rem' }}
@@ -274,7 +272,7 @@ const ApprovalPage = () => {
                                     onClick={() => handleManagePermissions(user)}
                                     className="text-green-600 hover:text-green-900 text-sm font-medium hover:bg-green-50 px-2 py-1 rounded transition-colors whitespace-nowrap"
                                   >
-                                    Manage Permissions
+                                    Manage
                                   </button>
                                 )}
                               </div>
@@ -345,7 +343,7 @@ const ApprovalPage = () => {
                                 onClick={() => handleManagePermissions(user)}
                                 className="w-full text-green-600 hover:text-green-900 text-sm font-medium bg-green-50 hover:bg-green-100 px-3 py-2 rounded transition-colors"
                               >
-                                Manage Permissions
+                                Manage 
                               </button>
                             )}
                           </div>
