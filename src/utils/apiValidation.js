@@ -203,7 +203,6 @@ class SecureAPI {
     return result
   }
 
-  
   async upsert(table, data, options = {}) {
     if (!(await this.isApproved())) {
       throw new Error('User not approved')

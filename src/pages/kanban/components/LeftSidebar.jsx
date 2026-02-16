@@ -6,16 +6,19 @@ import {
   Users,
   ChevronRight,
   ChevronDown,
-  X
+  X,
+  History,
+  ClipboardCheck
 } from 'lucide-react';
 
 const LeftSidebar = ({ 
   activeView, 
   onViewChange, 
-  branches,
+  branches = [],
   currentUser,
   onSelectBranch,
-  onStaffListClick
+  onStaffListClick,
+  pendingReviewCount = 0
 }) => {
   const [expandedBranches, setExpandedBranches] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,26 +30,33 @@ const LeftSidebar = ({
     setExpandedBranches(!expandedBranches);
   };
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
   const handleNavClick = (callback) => {
-    callback();
+    if (callback) {
+      callback();
+    }
     setIsMobileMenuOpen(false);
   };
 
-  const NavItem = ({ icon: Icon, label, view, active, onClick }) => (
+  const NavItem = ({ icon: Icon, label, active, onClick, badge }) => (
     <button
       onClick={() => handleNavClick(onClick)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
         active
           ? 'bg-blue-600 text-white shadow-md'
           : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
       <Icon className="w-5 h-5" />
-      <span className="font-semibold">{label}</span>
+      <span className="font-semibold flex-1 text-left">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+          active 
+            ? 'bg-white text-blue-600' 
+            : 'bg-red-500 text-white'
+        }`}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 
@@ -142,7 +152,7 @@ const LeftSidebar = ({
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button 
           className={`burger-menu ${isMobileMenuOpen ? 'open' : ''}`}
-          onClick={toggleMobileMenu}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           aria-label="Toggle menu"
         >
           <span></span>
@@ -154,7 +164,7 @@ const LeftSidebar = ({
       {/* Mobile Overlay */}
       <div 
         className={`mobile-overlay ${isMobileMenuOpen ? 'open' : ''}`}
-        onClick={toggleMobileMenu}
+        onClick={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Sidebar */}
@@ -164,21 +174,20 @@ const LeftSidebar = ({
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-black text-gray-900">
-                {isAdmin ? 'Multifactors Sales' : 'Multifactors Sales'}
+                Multifactors Sales
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {currentUser?.full_name}
+                {currentUser?.full_name || 'User'}
               </p>
             </div>
             <button 
-              onClick={toggleMobileMenu}
+              onClick={() => setIsMobileMenuOpen(false)}
               className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
-        
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -186,7 +195,6 @@ const LeftSidebar = ({
           <NavItem
             icon={LayoutDashboard}
             label="Dashboard"
-            view="dashboard"
             active={activeView === 'dashboard'}
             onClick={() => onViewChange('dashboard')}
           />
@@ -196,25 +204,42 @@ const LeftSidebar = ({
             <NavItem
               icon={Building2}
               label="Branches"
-              view="companies"
               active={activeView === 'companies'}
               onClick={() => onViewChange('companies')}
             />
           )}
 
           {/* Admin Only: Staff Management */}
-          {isAdmin && (
+          {isAdmin && onStaffListClick && (
             <NavItem
               icon={Users}
               label="Staff"
-              view="staff"
               active={activeView === 'staff'}
               onClick={onStaffListClick}
             />
           )}
 
-          {/* Branches Section */}
-          {branches.length > 0 && (
+          {/* Admin Only: To Review - NEW */}
+          {isAdmin && (
+            <NavItem
+              icon={ClipboardCheck}
+              label="To Review"
+              active={activeView === 'review'}
+              onClick={() => onViewChange('review')}
+              badge={pendingReviewCount}
+            />
+          )}
+
+          {/* History - Both Admin and Staff - NEW */}
+          <NavItem
+            icon={History}
+            label="History"
+            active={activeView === 'history'}
+            onClick={() => onViewChange('history')}
+          />
+
+          {/* My Boards Section - Staff Only */}
+          {isStaff && branches.length > 0 && (
             <div className="pt-4">
               <button
                 onClick={toggleBranches}
@@ -222,7 +247,7 @@ const LeftSidebar = ({
               >
                 <div className="flex items-center gap-2">
                   <Kanban className="w-4 h-4" />
-                  <span>{isStaff ? 'My Boards' : 'Branches'}</span>
+                  <span>My Boards</span>
                 </div>
                 {expandedBranches ? (
                   <ChevronDown className="w-4 h-4" />
@@ -258,7 +283,7 @@ const LeftSidebar = ({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 text-center">
-            {isAdmin ? 'Administrator' : 'Staff Member'}
+            {isAdmin ? 'Administrator' : isStaff ? 'Staff Member' : 'User'}
           </div>
         </div>
       </div>

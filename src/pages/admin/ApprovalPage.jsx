@@ -3,6 +3,7 @@ import { usePageSecurity } from '../../hooks/usePageSecurity'
 import { canApproveUsers, clearPermissionsCache } from '../../utils/rbac'
 import { supabase } from '../../lib/supabase'
 import StaffPermissionsModal from '../../components/StaffPermissionsModal'
+import { Building2 } from 'lucide-react'
 
 const useIsDesktop = () => {
   const [isDesktop, setIsDesktop] = useState(
@@ -25,6 +26,7 @@ const ApprovalPage = () => {
   const isDesktop = useIsDesktop()
 
   const [users, setUsers] = useState([])
+  const [userBranches, setUserBranches] = useState({})
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
@@ -45,6 +47,48 @@ const ApprovalPage = () => {
     }
 
     setUsers(data || [])
+    
+    // Load branch assignments for staff users
+    await fetchUserBranches(data || [])
+  }
+
+  const fetchUserBranches = async (usersList) => {
+    try {
+      const staffUsers = usersList.filter(u => u.role === 'staff')
+      if (staffUsers.length === 0) return
+
+      const staffIds = staffUsers.map(u => u.id)
+
+      const { data, error } = await supabase
+        .from('staff_branches')
+        .select(`
+          staff_id,
+          branch_id,
+          branches (
+            id,
+            name,
+            location
+          )
+        `)
+        .in('staff_id', staffIds)
+
+      if (error) throw error
+
+      // Organize branches by user ID
+      const branchesByUser = {}
+      data?.forEach(item => {
+        if (!branchesByUser[item.staff_id]) {
+          branchesByUser[item.staff_id] = []
+        }
+        if (item.branches) {
+          branchesByUser[item.staff_id].push(item.branches)
+        }
+      })
+
+      setUserBranches(branchesByUser)
+    } catch (err) {
+      console.error('Error fetching user branches:', err)
+    }
   }
 
   useEffect(() => {
@@ -130,6 +174,35 @@ const ApprovalPage = () => {
     return `${base} bg-red-100 text-red-800`
   }
 
+  const renderBranchBadges = (userId) => {
+    const branches = userBranches[userId] || []
+    
+    if (branches.length === 0) {
+      return (
+        <span className="text-xs text-gray-400 italic">No branches assigned</span>
+      )
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {branches.slice(0, 2).map(branch => (
+          <span
+            key={branch.id}
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium"
+          >
+            <Building2 className="w-3 h-3" />
+            {branch.name}
+          </span>
+        ))}
+        {branches.length > 2 && (
+          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+            +{branches.length - 2} more
+          </span>
+        )}
+      </div>
+    )
+  }
+
   if (securityLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-100">
@@ -140,8 +213,6 @@ const ApprovalPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Removed AdminSidebar - it should be in your App.jsx or layout component */}
-
       <div className="min-h-screen transition-all">
         <div
           className="bg-white shadow px-4 py-3 sticky top-0 z-10"
@@ -205,7 +276,7 @@ const ApprovalPage = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          {['#', 'User', 'Role', 'Status', 'Registered', 'Actions'].map(col => (
+                          {['#', 'User', 'Role', 'Status', 'Branches', 'Registered', 'Actions'].map(col => (
                             <th
                               key={col}
                               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -243,6 +314,14 @@ const ApprovalPage = () => {
 
                             <td className="px-6 py-4">
                               <span className={statusBadge(user.status)}>{user.status}</span>
+                            </td>
+
+                            <td className="px-6 py-4">
+                              {user.role === 'staff' ? (
+                                renderBranchBadges(user.id)
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
                             </td>
 
                             <td className="px-6 py-4 text-sm text-gray-500">
@@ -314,6 +393,13 @@ const ApprovalPage = () => {
                             </select>
                           </div>
 
+                          {user.role === 'staff' && (
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Branches</label>
+                              {renderBranchBadges(user.id)}
+                            </div>
+                          )}
+
                           <div>
                             <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Registered</label>
                             <div className="text-sm text-gray-900">
@@ -343,7 +429,7 @@ const ApprovalPage = () => {
                                 onClick={() => handleManagePermissions(user)}
                                 className="w-full text-green-600 hover:text-green-900 text-sm font-medium bg-green-50 hover:bg-green-100 px-3 py-2 rounded transition-colors"
                               >
-                                Manage 
+                                Manage Branches
                               </button>
                             )}
                           </div>

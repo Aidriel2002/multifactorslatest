@@ -49,7 +49,6 @@ function EditQuotation2() {
     fetchQuotation();
   }, [id]);
 
-  // Auto-save draft whenever formData, items, or totalPrice change (after initial load)
   useEffect(() => {
     if (initialLoadComplete) {
       const saveDraft = () => {
@@ -71,7 +70,6 @@ function EditQuotation2() {
     }
   }, [formData, items, totalPrice, initialLoadComplete]);
 
-  // Warn user before leaving page if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
@@ -329,7 +327,6 @@ function EditQuotation2() {
           subtitle={`Reference: ${formData.referenceNumber}`}
         />
 
-        {/* Draft Banner */}
         {showDraftBanner && (
           <div className="mx-8 mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center">
@@ -361,12 +358,10 @@ function EditQuotation2() {
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
 
-            {/* Auto-save indicator */}
             <div className="mb-4 flex justify-end">
               <span className="text-xs text-gray-500 italic">✓ Auto-saving draft...</span>
             </div>
 
-            {/* ── Quotation Information ── */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Quotation Information
@@ -446,7 +441,6 @@ function EditQuotation2() {
               </div>
             </div>
 
-            {/* ── Letter Content ── */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Letter Content
@@ -497,7 +491,6 @@ function EditQuotation2() {
               </div>
             </div>
 
-            {/* ── Items ── */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Items</h2>
@@ -595,7 +588,6 @@ function EditQuotation2() {
               </div>
             </div>
 
-            {/* ── Closing & Payment ── */}
             <div className="mb-8">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Closing Message
@@ -624,7 +616,6 @@ function EditQuotation2() {
               />
             </div>
 
-            {/* ── Signatures ── */}
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b-2 border-amber-500">
                 Authorized Signatures

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, MoreVertical, Trash2, Calendar, User } from 'lucide-react';
+import { Plus, MoreVertical, Trash2, Calendar, User, Play, ArrowRight, CheckCircle, Building2 } from 'lucide-react';
 
 const KanbanColumn = ({ 
   column, 
@@ -8,10 +8,11 @@ const KanbanColumn = ({
   onEditTask,
   onMoveTask,
   canDelete,
-  canAddTask = false, // Only true for "todo" column
+  canAddTask = false,
   currentUser
 }) => {
   const [draggedOver, setDraggedOver] = useState(false);
+  const [processingTaskId, setProcessingTaskId] = useState(null);
 
   const handleDragStart = (e, task) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -62,9 +63,76 @@ const KanbanColumn = ({
     }
   };
 
+  const handleStatusProgress = async (task) => {
+    if (processingTaskId === task.id) return;
+
+    setProcessingTaskId(task.id);
+    
+    try {
+      let newStatus = task.status;
+      
+      // Determine next status
+      switch (task.status) {
+        case 'todo':
+          newStatus = 'in-progress';
+          break;
+        case 'in-progress':
+          newStatus = 'validating';
+          break;
+        case 'validating':
+          newStatus = 'completed';
+          break;
+        default:
+          newStatus = task.status;
+      }
+
+      // Use onMoveTask which should handle timestamps
+      if (onMoveTask) {
+        await onMoveTask(task.id, newStatus);
+      }
+    } catch (error) {
+      console.error('Error progressing task status:', error);
+      alert('Failed to update task status. Please try again.');
+    } finally {
+      setProcessingTaskId(null);
+    }
+  };
+
+  const getProgressButtonLabel = (status) => {
+    switch (status) {
+      case 'todo':
+        return 'Start';
+      case 'in-progress':
+        return 'Next';
+      case 'validating':
+        return 'Submit';
+      default:
+        return null;
+    }
+  };
+
+  const getProgressButtonIcon = (status) => {
+    switch (status) {
+      case 'todo':
+        return Play;
+      case 'in-progress':
+        return ArrowRight;
+      case 'validating':
+        return CheckCircle;
+      default:
+        return null;
+    }
+  };
+
   const TaskCard = ({ task }) => {
     const isAdmin = currentUser?.role === 'admin';
-    const canEdit = isAdmin; // Only admin can edit tasks
+    const isAssignedToMe = task.assigned_to === currentUser?.id;
+    const canEdit = isAdmin;
+    const canProgress = isAssignedToMe && task.status !== 'completed';
+    
+    const buttonLabel = getProgressButtonLabel(task.status);
+    const ButtonIcon = getProgressButtonIcon(task.status);
+    const isProcessing = processingTaskId === task.id;
     
     return (
       <div
@@ -72,6 +140,7 @@ const KanbanColumn = ({
         onDragStart={(e) => handleDragStart(e, task)}
         className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-move group"
       >
+        {/* Header with Title and Edit */}
         <div className="flex items-start justify-between mb-2">
           <h4 className="font-semibold text-gray-900 flex-1 pr-2">{task.title}</h4>
           {canEdit && (
@@ -84,11 +153,13 @@ const KanbanColumn = ({
           )}
         </div>
 
+        {/* Description */}
         {task.description && (
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
         )}
 
-        <div className="flex items-center justify-between text-xs">
+        {/* Metadata */}
+        <div className="flex items-center justify-between text-xs mb-3">
           <div className="flex items-center gap-2">
             {task.priority && (
               <span className={`px-2 py-1 rounded-full font-medium ${getPriorityColor(task.priority)}`}>
@@ -105,15 +176,45 @@ const KanbanColumn = ({
           {task.assigned_user && (
             <span className="flex items-center gap-1 text-gray-500">
               <User className="w-3 h-3" />
-              {/* FIX: Access the name property instead of rendering the object */}
               <span className="truncate max-w-[100px]">
                 {typeof task.assigned_user === 'object' 
-                  ? task.assigned_user.name 
+                  ? task.assigned_user.name || task.assigned_user.full_name
                   : task.assigned_user}
               </span>
             </span>
           )}
         </div>
+
+        {/* Progress Button */}
+        {canProgress && buttonLabel && ButtonIcon && (
+          <button
+            onClick={() => handleStatusProgress(task)}
+            disabled={isProcessing}
+            className={`w-full py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              isProcessing
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : task.status === 'todo'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : task.status === 'in-progress'
+                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                : task.status === 'validating'
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-600 hover:bg-gray-700 text-white'
+            }`}
+          >
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <ButtonIcon className="w-4 h-4" />
+                <span>{buttonLabel}</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     );
   };
@@ -144,7 +245,7 @@ const KanbanColumn = ({
           </span>
         </div>
         
-        {/* Add Task Button - Only show for "todo" column and if canAddTask is true */}
+        {/* Add Task Button */}
         {canAddTask && column.id === 'todo' && (
           <button
             onClick={() => onAddTask(column.id)}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { clearPermissionsCache } from '../utils/rbac'
 import { useAuth } from '../contexts/AuthContext'
+import { Building2, Check } from 'lucide-react'
 
 const PERMISSIONS = {
   billing: { label: 'Billings', icon: '💰', description: 'Access billing dashboard and payment management' },
@@ -81,14 +82,15 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
         .eq('staff_id', user.id)
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading assigned branch:', error)
+        console.error('Error loading assigned branches:', error)
       } else if (data && data.length > 0) {
-        setAssignedBranches([data[0].branch_id])
+        // Load multiple branch IDs
+        setAssignedBranches(data.map(item => item.branch_id))
       } else {
         setAssignedBranches([])
       }
     } catch (error) {
-      console.error('Error loading assigned branch:', error)
+      console.error('Error loading assigned branches:', error)
     }
   }
 
@@ -110,6 +112,24 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
     }
   }
 
+  const toggleBranch = (branchId) => {
+    setAssignedBranches(prev => {
+      if (prev.includes(branchId)) {
+        return prev.filter(id => id !== branchId)
+      } else {
+        return [...prev, branchId]
+      }
+    })
+  }
+
+  const handleSelectAllBranches = () => {
+    if (assignedBranches.length === branches.length) {
+      setAssignedBranches([])
+    } else {
+      setAssignedBranches(branches.map(b => b.id))
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -124,7 +144,16 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
       if (allAccess) {
         permissionsToInsert = [{ user_id: user.id, permission: 'all_access' }]
       } else if (permissions.length > 0) {
-        permissionsToInsert = permissions.map(p => ({ user_id: user.id, permission: p }))
+        permissionsToInsert = permissions.flatMap(p => {
+  if (p === 'products') {
+    return [
+      { user_id: user.id, permission: 'products' },
+      { user_id: user.id, permission: 'projects' }
+    ]
+  }
+  return [{ user_id: user.id, permission: p }]
+})
+
       }
 
       if (permissionsToInsert.length > 0) {
@@ -135,20 +164,22 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
         if (error) throw error
       }
 
-      // Save branch assignment to staff_branches table
+      // Save multiple branch assignments
       await supabase
         .from('staff_branches')
         .delete()
         .eq('staff_id', user.id)
 
       if (assignedBranches.length > 0) {
+        const branchAssignments = assignedBranches.map(branchId => ({
+          staff_id: user.id,
+          branch_id: branchId,
+          created_at: new Date().toISOString()
+        }))
+
         const { error: branchError } = await supabase
           .from('staff_branches')
-          .insert({
-            staff_id: user.id,
-            branch_id: assignedBranches[0],
-            created_at: new Date().toISOString()
-          })
+          .insert(branchAssignments)
 
         if (branchError) {
           console.error('Branch assignment error:', branchError)
@@ -162,7 +193,7 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
         await refreshProfile()
       }
 
-      alert('Permissions and branch assignment updated successfully!')
+      alert('Permissions and branch assignments updated successfully!')
       onUpdate?.()
       onClose()
     } catch (error) {
@@ -317,16 +348,34 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   </div>
                 </div>
 
-                {/* Branch Assignment Section */}
+                {/* Branch Assignment Section - Now Multiple */}
                 <div className="border-t pt-6">
-                  <h4 className="text-base font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="mr-2">🏢</span>
-                    Branch Assignment
-                  </h4>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-semibold text-gray-900 flex items-center">
+                      <span className="mr-2">🏢</span>
+                      Branch Assignments
+                    </h4>
+                    {branches.length > 0 && (
+                      <button
+                        onClick={handleSelectAllBranches}
+                        className="text-sm font-medium text-green-600 hover:text-green-700 hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        {assignedBranches.length === branches.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    )}
+                  </div>
                   
                   <p className="text-sm text-gray-600 mb-4">
-                    Assign this staff member to a specific branch. They will be automatically organized under this branch.
+                    Assign this staff member to one or more branches. They will have access to tasks and data from all selected branches.
                   </p>
+
+                  {assignedBranches.length > 0 && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">
+                        ✓ {assignedBranches.length} branch{assignedBranches.length !== 1 ? 'es' : ''} assigned
+                      </p>
+                    </div>
+                  )}
 
                   {branches.length === 0 ? (
                     <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
@@ -336,61 +385,72 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                       <p className="mt-2 text-sm text-gray-500">No branches available</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Select Branch
-                        </label>
-                        <select
-                          value={assignedBranches[0] || ''}
-                          onChange={(e) => setAssignedBranches(e.target.value ? [e.target.value] : [])}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                        >
-                          <option value="">No Branch Assigned</option>
-                          {branches.map(branch => (
-                            <option key={branch.id} value={branch.id}>
-                              {branch.name} {branch.location && `- ${branch.location}`}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="space-y-2">
+                      {branches.map(branch => {
+                        const isSelected = assignedBranches.includes(branch.id)
+                        return (
+                          <div
+                            key={branch.id}
+                            onClick={() => toggleBranch(branch.id)}
+                            className={`
+                              relative p-4 rounded-lg border-2 transition-all cursor-pointer
+                              ${isSelected 
+                                ? 'border-green-500 bg-green-50' 
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`
+                                w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors
+                                ${isSelected 
+                                  ? 'bg-green-600 border-green-600' 
+                                  : 'bg-white border-gray-300'
+                                }
+                              `}>
+                                {isSelected && (
+                                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h5 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-gray-500" />
+                                  {branch.name}
+                                </h5>
+                                {branch.location && (
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    📍 {branch.location}
+                                  </p>
+                                )}
+                                {branch.description && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {branch.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {assignedBranches.length === 0 && branches.length > 0 && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-yellow-800">No branches assigned</p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            Select at least one branch to assign this staff member
+                          </p>
+                        </div>
                       </div>
-
-                      {assignedBranches.length > 0 && (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-green-800">
-                                Assigned to: {branches.find(b => b.id === assignedBranches[0])?.name}
-                              </p>
-                              {branches.find(b => b.id === assignedBranches[0])?.location && (
-                                <p className="text-xs text-green-700 mt-1">
-                                  📍 {branches.find(b => b.id === assignedBranches[0])?.location}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {assignedBranches.length === 0 && (
-                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-yellow-800">No branch assigned</p>
-                              <p className="text-xs text-yellow-700 mt-1">
-                                This staff member will appear in the "Unassigned" section
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -402,6 +462,11 @@ const StaffPermissionsModal = ({ isOpen, onClose, user, onUpdate }) => {
                   ) : (
                     <span>
                       {permissions.length} permission{permissions.length !== 1 ? 's' : ''} selected
+                    </span>
+                  )}
+                  {assignedBranches.length > 0 && (
+                    <span className="ml-3 text-blue-700 font-medium">
+                      • {assignedBranches.length} branch{assignedBranches.length !== 1 ? 'es' : ''}
                     </span>
                   )}
                 </div>

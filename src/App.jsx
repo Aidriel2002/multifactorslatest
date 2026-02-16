@@ -10,9 +10,8 @@ import {
   canAccessContacts,
   canAccessQuotations,
   canAccessReports,
-  canManageProducts,
   isAdminOrStaff,
-  canManageProjects,
+  canManageLandingPage,
   canManageKanban,
 } from './utils/rbac'
 
@@ -125,18 +124,15 @@ const AppLayoutWrapper = () => {
   const publicRoutes = ['/', '/productlist', '/pending-approval', '/account-rejected', '/accountlogin']
   const isPublicRoute = publicRoutes.includes(location.pathname)
 
-  // Hide global sidebar on pages with their own custom sidebar
   const hideGlobalSidebar = 
     location.pathname === '/kanban' || 
     location.pathname === '/manageproject' || 
     location.pathname === '/manageproduct'
-    
 
   if (isPublicRoute || !profile || hideGlobalSidebar) {
     return null
   }
 
-  // Show AdminSidebar for admin and staff, EmployeeSidebar for user
   const isAdminOrStaff = profile.role === 'admin' || profile.role === 'staff'
   
   return isAdminOrStaff ? <AdminSidebar /> : <EmployeeSidebar />
@@ -163,7 +159,7 @@ function App() {
               <Route
                 path="/manageproject"
                 element={
-                  <SecureRoute requirePermission={canManageProjects}>
+                  <SecureRoute requirePermission={canManageLandingPage}>
                     <ManageProject />
                   </SecureRoute>
                 }
@@ -365,7 +361,7 @@ function App() {
               <Route
                 path="/manageproduct"
                 element={
-                  <SecureRoute requirePermission={canManageProducts}>
+                  <SecureRoute requirePermission={canManageLandingPage}>
                     <ManageProduct />
                   </SecureRoute>
                 }

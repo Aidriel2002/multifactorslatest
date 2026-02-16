@@ -51,10 +51,10 @@ const menuItemsConfig = [
   },
   {
     label: 'Landing Page Setup',
-    path: '/manageproject',
+    path: '/manageproduct',  // FIXED: Changed from /manageproject to /manageproduct
     icon: Settings,
     roles: ['admin', 'staff'],
-    requiresPermission: PERMISSION_TYPES.PRODUCTS
+    requiresPermission: [PERMISSION_TYPES.PRODUCTS, PERMISSION_TYPES.PROJECTS] // Accept EITHER permission
   },
   { type: 'header', label: 'Integration' },
   {
@@ -62,7 +62,7 @@ const menuItemsConfig = [
     path: '/kanban',
     icon: Kanban,
     roles: ['admin', 'staff'],
-    requiresPermission: PERMISSION_TYPES.REPORTS
+    requiresPermission: PERMISSION_TYPES.KANBAN
   },
   {
     label: 'DICT Reports',
@@ -137,11 +137,20 @@ const AdminSidebar = () => {
         if (!item.roles) return true
         if (!item.roles.includes(userRole)) return false
         if (userRole === 'admin') return true
+        
         if (userRole === 'staff') {
           if (!item.requiresPermission) return true
           if (staffPermissions.includes(PERMISSION_TYPES.ALL_ACCESS)) return true
+          
+          // Handle array of permissions (OR logic - any permission grants access)
+          if (Array.isArray(item.requiresPermission)) {
+            return item.requiresPermission.some(perm => staffPermissions.includes(perm))
+          }
+          
+          // Handle single permission
           return staffPermissions.includes(item.requiresPermission)
         }
+        
         return false
       })
 

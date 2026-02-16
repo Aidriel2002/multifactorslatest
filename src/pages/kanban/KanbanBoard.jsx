@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, taskAPI } from '../../lib/supabase';
 import { getCurrentUserProfile } from '../../lib/supabase';
 import LeftSidebar from './components/LeftSidebar';
 import Dashboard from './components/Dashboard';
@@ -11,9 +11,12 @@ import TaskDetailsModal from './components/TaskDetailsModal';
 import Notifications from './components/Notifications';
 import StaffList from './components/StaffList';
 import StaffTasksView from './components/StaffTasksView';
+import ToReviewView from './components/ToReview.jsx';
+import HistoryView from './components/HistoryView.jsx';
+import AddBoardModal from './components/AddBoardModal';
 import { usePageSecurity } from '../../hooks/usePageSecurity';
 import { useStaleTaskChecker } from '../../hooks/useStaleTaskChecker';
-import { Layers, ArrowLeft } from 'lucide-react';
+import { Layers, ArrowLeft, ChevronDown } from 'lucide-react';
 
 const KanbanBoard = () => {
   const [activeView, setActiveView] = useState('dashboard');
@@ -27,6 +30,7 @@ const KanbanBoard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isTaskDetailModalOpen, setIsTaskDetailModalOpen] = useState(false);
+  const [isAddBoardModalOpen, setIsAddBoardModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [newTaskStatus, setNewTaskStatus] = useState('todo');
@@ -36,6 +40,7 @@ const KanbanBoard = () => {
   
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [showStaffList, setShowStaffList] = useState(false);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   const { loading: securityLoading } = usePageSecurity(
     (user) => user?.role === 'admin' || user?.role === 'staff'
@@ -159,9 +164,13 @@ const KanbanBoard = () => {
       return [];
     }
 
-    setBoards(data || []);
-    setSelectedBoard(data?.[0] || null);
-    return data || [];
+    const sortedBoards = (data || []).sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+
+    setBoards(sortedBoards);
+    setSelectedBoard(sortedBoards[0] || null);
+    return sortedBoards;
   };
 
   const loadStaffUsers = async () => {
@@ -214,6 +223,38 @@ const KanbanBoard = () => {
         userMap[user.id] = user.full_name;
       });
 
+      // Load comments for all tasks from task_comments table
+      const taskIds = tasksData.map(t => t.id);
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('task_comments')
+        .select('id, task_id, comment, created_at, user_id, read_by')
+        .in('task_id', taskIds)
+        .order('created_at', { ascending: true });
+
+      if (commentsError) {
+        console.error('Error loading comments:', commentsError);
+      }
+
+      // Group comments by task_id
+      const commentsByTask = {};
+      (commentsData || []).forEach(comment => {
+        if (!commentsByTask[comment.task_id]) {
+          commentsByTask[comment.task_id] = [];
+        }
+        commentsByTask[comment.task_id].push({
+          id: comment.id,
+          task_id: comment.task_id,
+          content: comment.comment, // Map 'comment' field to 'content' for consistency
+          created_at: comment.created_at,
+          created_by: comment.user_id,
+          read_by: comment.read_by || [],
+          user: {
+            id: comment.user_id,
+            name: userMap[comment.user_id] || 'Unknown User'
+          }
+        });
+      });
+
       const formattedTasks = tasksData.map(task => ({
         ...task,
         assigned_user: task.assigned_to ? {
@@ -223,7 +264,8 @@ const KanbanBoard = () => {
         created_user: task.created_by ? {
           id: task.created_by,
           name: userMap[task.created_by] || 'Unknown'
-        } : null
+        } : null,
+        comments: commentsByTask[task.id] || []
       }));
 
       return formattedTasks;
@@ -237,51 +279,65 @@ const KanbanBoard = () => {
     try {
       const isAdmin = currentUser?.role === 'admin';
       
-      let query = supabase
-        .from('tasks')
-        .select('*')
-        .eq('board_id', boardId);
+      // Use taskAPI to get tasks with assigned_users populated
+      const tasksData = await taskAPI.getAllTasksForBoard(boardId);
+      
+      // Filter by current user if not admin
+      const filteredTasks = isAdmin 
+        ? tasksData 
+        : tasksData.filter(t => 
+            t.assigned_to === currentUser.id || 
+            (t.assigned_users && t.assigned_users.some(u => u.id === currentUser.id))
+          );
 
-      if (!isAdmin) {
-        query = query.eq('assigned_to', currentUser.id);
-      }
+      // Load comments for filtered tasks from task_comments table
+      const taskIds = filteredTasks.map(t => t.id);
+      const { data: commentsData } = await supabase
+        .from('task_comments')
+        .select('id, task_id, comment, created_at, user_id, read_by')
+        .in('task_id', taskIds)
+        .order('created_at', { ascending: true });
 
-      const { data: tasksData, error: tasksError } = await query.order('created_at', { ascending: false });
-
-      if (tasksError) throw tasksError;
-
-      if (!tasksData || tasksData.length === 0) {
-        setTasks([]);
-        return;
-      }
-
-      const userIds = [...new Set([
-        ...tasksData.map(t => t.assigned_to).filter(Boolean),
-        ...tasksData.map(t => t.created_by).filter(Boolean)
-      ])];
-
-      const { data: usersData, error: usersError } = await supabase
+      // Get user info for comment authors
+      const commentUserIds = [...new Set((commentsData || []).map(c => c.user_id))];
+      const { data: commentUsersData } = await supabase
         .from('users')
         .select('id, full_name')
-        .in('id', userIds);
+        .in('id', commentUserIds);
 
-      if (usersError) throw usersError;
-
-      const userMap = {};
-      (usersData || []).forEach(user => {
-        userMap[user.id] = user.full_name;
+      const commentUserMap = {};
+      (commentUsersData || []).forEach(user => {
+        commentUserMap[user.id] = user.full_name;
       });
 
-      const formattedTasks = tasksData.map(task => ({
+      // Group comments by task_id
+      const commentsByTask = {};
+      (commentsData || []).forEach(comment => {
+        if (!commentsByTask[comment.task_id]) {
+          commentsByTask[comment.task_id] = [];
+        }
+        commentsByTask[comment.task_id].push({
+          id: comment.id,
+          task_id: comment.task_id,
+          content: comment.comment, // Map 'comment' field to 'content' for consistency
+          created_at: comment.created_at,
+          created_by: comment.user_id,
+          read_by: comment.read_by || [],
+          user: {
+            id: comment.user_id,
+            name: commentUserMap[comment.user_id] || 'Unknown User'
+          }
+        });
+      });
+
+      // Format for compatibility with existing code
+      const formattedTasks = filteredTasks.map(task => ({
         ...task,
-        assigned_user: task.assigned_to ? {
-          id: task.assigned_to,
-          name: userMap[task.assigned_to] || 'Unknown'
+        assigned_user: task.assigned_users && task.assigned_users.length > 0 ? {
+          id: task.assigned_users[0].id,
+          name: task.assigned_users[0].full_name
         } : null,
-        created_user: task.created_by ? {
-          id: task.created_by,
-          name: userMap[task.created_by] || 'Unknown'
-        } : null
+        comments: commentsByTask[task.id] || []
       }));
 
       setTasks(formattedTasks);
@@ -372,21 +428,20 @@ const KanbanBoard = () => {
     }
   };
 
-  const createBoard = async () => {
+  const handleCreateBoard = async (boardName) => {
     if (!selectedBranch) {
       alert('Please select a branch first.');
       return;
     }
 
-    const name = prompt('Enter board name:');
-    if (!name || !name.trim()) return;
-
     try {
+      setSaving(true);
+
       const { data, error } = await supabase
         .from('boards')
         .insert([
           {
-            name: name.trim(),
+            name: boardName,
             branch_id: selectedBranch.id,
             created_by: currentUser.id
           }
@@ -396,12 +451,19 @@ const KanbanBoard = () => {
 
       if (error) throw error;
 
-      setBoards(prev => [...prev, data]);
+      const updatedBoards = [...boards, data].sort((a, b) => 
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      );
+
+      setBoards(updatedBoards);
       setSelectedBoard(data);
+      setIsAddBoardModalOpen(false);
 
     } catch (err) {
       console.error('Error creating board:', err);
       alert('Failed to create board. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -415,28 +477,21 @@ const KanbanBoard = () => {
       setSaving(true);
 
       if (editingTask) {
-        const { error } = await supabase
-          .from('tasks')
-          .update({
-            ...taskData,
-            updated_by: currentUser.id
-          })
-          .eq('id', editingTask.id);
+        const { data, error } = await taskAPI.updateTask(editingTask.id, {
+          ...taskData,
+          updated_by: currentUser.id
+        });
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('tasks')
-          .insert([
-            {
-              ...taskData,
-              status: newTaskStatus,
-              board_id: selectedBoard.id,
-              branch_id: selectedBranch.id,
-              created_by: currentUser.id,
-              updated_by: currentUser.id
-            }
-          ]);
+        const { data, error } = await taskAPI.createTask({
+          ...taskData,
+          status: newTaskStatus,
+          board_id: selectedBoard.id,
+          branch_id: selectedBranch.id,
+          created_by: currentUser.id,
+          updated_by: currentUser.id
+        });
 
         if (error) throw error;
       }
@@ -458,12 +513,36 @@ const KanbanBoard = () => {
 
   const handleMoveTask = async (taskId, newStatus) => {
     try {
+      const now = new Date().toISOString();
+      const updateData = { 
+        status: newStatus,
+        changed_by: currentUser.id
+      };
+
+      switch (newStatus) {
+        case 'in-progress':
+          updateData.in_progress_at = now;
+          const { data: currentTask } = await supabase
+            .from('tasks')
+            .select('started_at')
+            .eq('id', taskId)
+            .single();
+          
+          if (!currentTask?.started_at) {
+            updateData.started_at = now;
+          }
+          break;
+        case 'validating':
+          updateData.validating_at = now;
+          break;
+        case 'completed':
+          updateData.completed_at = now;
+          break;
+      }
+
       const { error } = await supabase
         .from('tasks')
-        .update({ 
-          status: newStatus,
-          updated_by: currentUser.id
-        })
+        .update(updateData)
         .eq('id', taskId);
 
       if (error) throw error;
@@ -492,6 +571,11 @@ const KanbanBoard = () => {
   };
 
   const handleNotificationClick = async (notification) => {
+    if (notification.type === 'navigate_to_review') {
+      setActiveView('review');
+      return;
+    }
+    
     if (notification.task_id) {
       const { data: taskData, error } = await supabase
         .from('tasks')
@@ -511,6 +595,26 @@ const KanbanBoard = () => {
           userMap[user.id] = user.full_name;
         });
 
+        // Load comments for this task from task_comments table
+        const { data: commentsData } = await supabase
+          .from('task_comments')
+          .select('*')
+          .eq('task_id', taskData.id)
+          .order('created_at', { ascending: true });
+
+        const formattedComments = (commentsData || []).map(comment => ({
+          id: comment.id,
+          task_id: comment.task_id,
+          content: comment.comment, // Map 'comment' field to 'content' for consistency
+          created_at: comment.created_at,
+          created_by: comment.user_id,
+          read_by: comment.read_by || [],
+          user: {
+            id: comment.user_id,
+            name: userMap[comment.user_id] || 'Unknown User'
+          }
+        }));
+
         const formattedTask = {
           ...taskData,
           assigned_user: taskData.assigned_to ? {
@@ -520,7 +624,8 @@ const KanbanBoard = () => {
           created_user: taskData.created_by ? {
             id: taskData.created_by,
             name: userMap[taskData.created_by]
-          } : null
+          } : null,
+          comments: formattedComments
         };
 
         handleTaskClick(formattedTask);
@@ -536,6 +641,57 @@ const KanbanBoard = () => {
     setShowStaffList(!showStaffList);
     setSelectedStaff(null);
     setActiveView('staff');
+  };
+
+  const handleTaskConfirm = async (taskId) => {
+    const newAllTasks = await loadAllTasks(currentUser);
+    setAllTasks(newAllTasks);
+    
+    if (selectedBoard) {
+      await loadTasks(selectedBoard.id);
+    }
+  };
+
+  const handleRefresh = async () => {
+    const newAllTasks = await loadAllTasks(currentUser);
+    setAllTasks(newAllTasks);
+  };
+
+  const handleMarkCommentsAsRead = async (taskId) => {
+    try {
+      // Get the task's comments from task_comments table
+      const { data: comments, error: fetchError } = await supabase
+        .from('task_comments')
+        .select('id, read_by')
+        .eq('task_id', taskId);
+
+      if (fetchError) throw fetchError;
+
+      if (!comments || comments.length === 0) {
+        return; // No comments to mark as read
+      }
+
+      // Update each comment to add current user to read_by array
+      const updates = comments.map(comment => {
+        const readBy = comment.read_by || [];
+        if (!readBy.includes(currentUser.id)) {
+          readBy.push(currentUser.id);
+        }
+        return supabase
+          .from('task_comments')
+          .update({ read_by: readBy })
+          .eq('id', comment.id);
+      });
+
+      await Promise.all(updates);
+
+      // Refresh all tasks to update the UI
+      const newAllTasks = await loadAllTasks(currentUser);
+      setAllTasks(newAllTasks);
+
+    } catch (err) {
+      console.error('Error marking comments as read:', err);
+    }
   };
 
   const getTasksByStatus = (status) =>
@@ -604,6 +760,8 @@ const KanbanBoard = () => {
                   currentUser={currentUser}
                   onAddBranch={handleAddBranch}
                   onSelectBranch={handleSelectBranch}
+                  onMarkCommentsAsRead={handleMarkCommentsAsRead}
+                  onTasksRefresh={handleRefresh}
                 />
               ) : (
                 <StaffDashboard
@@ -623,6 +781,21 @@ const KanbanBoard = () => {
               onSelectBranch={handleSelectBranch}
               onEditBranch={handleEditBranch}
               onDeleteBranch={handleDeleteBranch}
+            />
+          )}
+
+          {isAdmin && activeView === 'review' && (
+            <ToReviewView
+              currentUser={currentUser}
+              onTaskConfirm={handleTaskConfirm}
+              onRefresh={handleRefresh}
+            />
+          )}
+
+          {activeView === 'history' && (
+            <HistoryView
+              currentUser={currentUser}
+              isAdmin={isAdmin}
             />
           )}
 
@@ -661,7 +834,7 @@ const KanbanBoard = () => {
 
                   {isAdmin && (
                     <button
-                      onClick={createBoard}
+                      onClick={() => setIsAddBoardModalOpen(true)}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-sm text-sm flex-shrink-0"
                     >
                       <Layers className="w-4 h-4" />
@@ -673,24 +846,33 @@ const KanbanBoard = () => {
               </div>
 
               {boards.length > 0 && (
-                <div className="bg-gray-50 px-6 py-3 border-b">
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-gray-700">Board:</label>
-                    <select
-                      value={selectedBoard?.id || ''}
-                      onChange={(e) =>
-                        setSelectedBoard(
-                          boards.find(b => b.id === e.target.value)
-                        )
-                      }
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {boards.map(board => (
-                        <option key={board.id} value={board.id}>
-                          {board.name}
-                        </option>
-                      ))}
-                    </select>
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b">
+                  <div className="flex items-center gap-4">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-gray-500" />
+                      Active Board:
+                    </label>
+                    <div className="relative flex-1 max-w-md">
+                      <select
+                        value={selectedBoard?.id || ''}
+                        onChange={(e) =>
+                          setSelectedBoard(
+                            boards.find(b => b.id === e.target.value)
+                          )
+                        }
+                        className="w-full appearance-none px-4 py-2.5 pr-10 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer hover:border-gray-400 font-medium text-gray-900"
+                      >
+                        {boards.map(board => (
+                          <option key={board.id} value={board.id}>
+                            {board.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    </div>
+                    <div className="text-xs text-gray-500 font-medium">
+                      {boards.length} {boards.length === 1 ? 'board' : 'boards'}
+                    </div>
                   </div>
                 </div>
               )}
@@ -698,7 +880,9 @@ const KanbanBoard = () => {
               {boards.length === 0 ? (
                 <div className="flex-1 flex items-center justify-center p-6">
                   <div className="text-center max-w-md">
-                    <Layers className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                    <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                      <Layers className="w-12 h-12 text-blue-600" />
+                    </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">No Boards Yet</h2>
                     <p className="text-gray-600 mb-6">
                       {isAdmin 
@@ -707,8 +891,8 @@ const KanbanBoard = () => {
                     </p>
                     {isAdmin && (
                       <button
-                        onClick={createBoard}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-md"
+                        onClick={() => setIsAddBoardModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-colors shadow-md font-medium"
                       >
                         <Layers className="w-5 h-5" />
                         Create First Board
@@ -769,17 +953,27 @@ const KanbanBoard = () => {
       </div>
 
       {isAdmin && (
-        <TaskModal
-          isOpen={isTaskModalOpen}
-          onClose={() => {
-            setIsTaskModalOpen(false);
-            setEditingTask(null);
-          }}
-          onSubmit={handleSubmitTask}
-          task={editingTask}
-          users={users}
-          saving={saving}
-        />
+        <>
+          <TaskModal
+            isOpen={isTaskModalOpen}
+            onClose={() => {
+              setIsTaskModalOpen(false);
+              setEditingTask(null);
+            }}
+            onSubmit={handleSubmitTask}
+            task={editingTask}
+            users={users}
+            saving={saving}
+          />
+
+          <AddBoardModal
+            isOpen={isAddBoardModalOpen}
+            onClose={() => setIsAddBoardModalOpen(false)}
+            onSubmit={handleCreateBoard}
+            existingBoards={boards}
+            saving={saving}
+          />
+        </>
       )}
 
       <TaskDetailsModal

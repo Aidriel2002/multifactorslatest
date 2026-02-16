@@ -354,6 +354,11 @@ export const quotationAPI = {
 
 export const projectAPI = {
   async getAll() {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const { data, error } = await supabase
       .from('project')
       .select('*')
@@ -363,14 +368,16 @@ export const projectAPI = {
       console.error('Error fetching projects:', error);
       throw error;
     }
-    
-    if (data && data.length > 0) {
-      //
-    }
+
     return data || [];
   },
 
   async getById(id) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const { data, error } = await supabase
       .from('project')
       .select('*')
@@ -381,11 +388,16 @@ export const projectAPI = {
       console.error('Error fetching project:', error);
       throw error;
     }
-    
+
     return data;
   },
 
   async create(projectData) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const { data, error } = await supabase
       .from('project')
       .insert([projectData])
@@ -396,10 +408,16 @@ export const projectAPI = {
       console.error('Error creating project:', error);
       throw error;
     }
+
     return data;
   },
 
   async update(id, projectData) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const { data, error } = await supabase
       .from('project')
       .update(projectData)
@@ -411,18 +429,22 @@ export const projectAPI = {
       console.error('Error updating project:', error);
       throw error;
     }
-    
+
     return data;
   },
 
   async delete(id) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const { data: project } = await supabase
       .from('project')
       .select('image_url')
       .eq('id', id)
       .single();
 
-    // Delete image from storage if exists
     if (project?.image_url) {
       try {
         const path = project.image_url.split('/project-images/')[1];
@@ -436,7 +458,6 @@ export const projectAPI = {
       }
     }
 
-    // Delete project record
     const { error } = await supabase
       .from('project')
       .delete()
@@ -449,6 +470,11 @@ export const projectAPI = {
   },
 
   async uploadImage(file) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
     const filePath = fileName;
@@ -473,6 +499,11 @@ export const projectAPI = {
   },
 
   async deleteImage(imageUrl) {
+    const isAdminUser = await isAdmin();
+    if (!isAdminUser) {
+      throw new Error('Access denied. Admins only.');
+    }
+
     try {
       const path = imageUrl.split('/project-images/')[1];
       if (path) {
@@ -494,15 +525,17 @@ export const projectAPI = {
   subscribeToChanges(callback) {
     return supabase
       .channel('project-changes')
-      .on('postgres_changes', 
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'project' },
         callback
       )
       .subscribe();
   }
 };
+
+
 export const kanbanAPI = {
-  // Get all tasks
   async getAllTasks() {
     const { data, error } = await supabase
       .from('kanban_tasks')
@@ -521,7 +554,6 @@ export const kanbanAPI = {
     return data || [];
   },
 
-  // Get single task
   async getTaskById(id) {
     const { data, error } = await supabase
       .from('kanban_tasks')
@@ -541,7 +573,6 @@ export const kanbanAPI = {
     return data;
   },
 
-  // Create task
   async createTask(taskData) {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -566,7 +597,6 @@ export const kanbanAPI = {
     return data;
   },
 
-  // Update task
   async updateTask(id, updates) {
     const { data, error } = await supabase
       .from('kanban_tasks')
@@ -587,7 +617,6 @@ export const kanbanAPI = {
     return data;
   },
 
-  // Delete task
   async deleteTask(id) {
     const { error } = await supabase
       .from('kanban_tasks')
@@ -600,7 +629,6 @@ export const kanbanAPI = {
     }
   },
 
-  // Update task status (for drag and drop)
   async updateTaskStatus(id, status, displayOrder) {
     const updates = { status };
     if (displayOrder !== undefined) {
@@ -610,7 +638,6 @@ export const kanbanAPI = {
     return await this.updateTask(id, updates);
   },
 
-  // Get comments for a task
   async getComments(taskId) {
     const { data, error } = await supabase
       .from('kanban_comments')
@@ -629,7 +656,6 @@ export const kanbanAPI = {
     return data || [];
   },
 
-  // Add comment
   async addComment(taskId, comment) {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -654,7 +680,6 @@ export const kanbanAPI = {
     return data;
   },
 
-  // Update comment
   async updateComment(id, comment) {
     const { data, error } = await supabase
       .from('kanban_comments')
@@ -674,7 +699,6 @@ export const kanbanAPI = {
     return data;
   },
 
-  // Delete comment
   async deleteComment(id) {
     const { error } = await supabase
       .from('kanban_comments')
@@ -687,7 +711,6 @@ export const kanbanAPI = {
     }
   },
 
-  // Get all users (for assignment)
   async getAllUsers() {
     const { data, error } = await supabase
       .from('users')
@@ -704,7 +727,6 @@ export const kanbanAPI = {
     return data || [];
   },
 
-  // Subscribe to task changes
   subscribeToTasks(callback) {
     return supabase
       .channel('kanban-tasks-changes')
@@ -715,7 +737,6 @@ export const kanbanAPI = {
       .subscribe();
   },
 
-  // Subscribe to comment changes
   subscribeToComments(taskId, callback) {
     return supabase
       .channel(`kanban-comments-${taskId}`)
@@ -732,6 +753,377 @@ export const kanbanAPI = {
   }
 };
 
+export const taskAPI = {
+  async createTask(taskData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    
+    const assignedUsers = Array.isArray(taskData.assigned_to) 
+      ? taskData.assigned_to 
+      : taskData.assigned_to 
+        ? [taskData.assigned_to] 
+        : [];
+    
+    
+    const { assigned_to, ...taskDataWithoutAssignment } = taskData;
+    
+    const taskToInsert = {
+      ...taskDataWithoutAssignment,
+      assigned_to: assignedUsers.length > 0 ? assignedUsers[0] : null,
+      created_by: user.id
+    };
+    
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([taskToInsert])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error inserting task:', error);
+      return { data: null, error };
+    }
+
+
+    if (assignedUsers.length > 0) {
+      
+      const { error: assignError } = await supabase
+        .rpc('assign_users_to_task', {
+          task_uuid: data.id,
+          user_ids: assignedUsers
+        });
+      
+      if (assignError) console.error('Error assigning users:', assignError);
+    }
+
+    const { data: assignedUsersData } = await supabase
+      .rpc('get_task_assigned_users', { task_uuid: data.id });
+    
+    data.assigned_users = assignedUsersData || [];
+    
+    if (data.created_by) {
+      const { data: createdUser } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', data.created_by)
+        .single();
+      
+      data.created_user = createdUser;
+    }
+    
+    if (data.branch_id) {
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('id', data.branch_id)
+        .single();
+      
+      data.branches = branch;
+    }
+    
+    if (data.board_id) {
+      const { data: board } = await supabase
+        .from('boards')
+        .select('id, name')
+        .eq('id', data.board_id)
+        .single();
+      
+      data.boards = board;
+    }
+
+    return { data, error: null };
+  },
+
+  async updateTask(taskId, updates) {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    const assignedUsers = updates.assigned_to;
+    const taskUpdates = { ...updates };
+    
+    if (assignedUsers !== undefined) {
+      const userArray = Array.isArray(assignedUsers) 
+        ? assignedUsers 
+        : assignedUsers 
+          ? [assignedUsers] 
+          : [];
+      
+      taskUpdates.assigned_to = userArray[0] || null;
+      
+      if (userArray.length > 0 || assignedUsers === null) {
+        const { error: assignError } = await supabase
+          .rpc('assign_users_to_task', {
+            task_uuid: taskId,
+            user_ids: userArray
+          });
+        
+        if (assignError) console.error('Error assigning users:', assignError);
+      }
+    }
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(taskUpdates)
+      .eq('id', taskId)
+      .select('*')
+      .single();
+
+    if (error) return { data: null, error };
+
+    const { data: assignedUsersData } = await supabase
+      .rpc('get_task_assigned_users', { task_uuid: data.id });
+    
+    data.assigned_users = assignedUsersData || [];
+    
+    if (data.created_by) {
+      const { data: createdUser } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', data.created_by)
+        .single();
+      
+      data.created_user = createdUser;
+    }
+    
+    if (data.branch_id) {
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('id', data.branch_id)
+        .single();
+      
+      data.branches = branch;
+    }
+    
+    if (data.board_id) {
+      const { data: board } = await supabase
+        .from('boards')
+        .select('id, name')
+        .eq('id', data.board_id)
+        .single();
+      
+      data.boards = board;
+    }
+
+    return { data, error: null };
+  },
+
+  async updateTaskStatus(taskId, newStatus, currentUser) {
+    const updates = {
+      status: newStatus,
+      updated_by: currentUser.id
+    };
+    
+    const now = new Date().toISOString();
+    
+    if (newStatus === 'in-progress') {
+      const { data: task } = await supabase
+        .from('tasks')
+        .select('started_at')
+        .eq('id', taskId)
+        .single();
+      
+      if (!task?.started_at) {
+        updates.started_at = now;
+      }
+      updates.in_progress_at = now;
+    } else if (newStatus === 'validating') {
+      updates.validating_at = now;
+    } else if (newStatus === 'completed') {
+      updates.completed_at = now;
+      updates.is_confirmed = false;
+    }
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId)
+      .select('*')
+      .single();
+
+    if (error) return { data: null, error };
+
+    const { data: assignedUsers } = await supabase
+      .rpc('get_task_assigned_users', { task_uuid: data.id });
+    
+    data.assigned_users = assignedUsers || [];
+    
+    if (data.created_by) {
+      const { data: createdUser } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', data.created_by)
+        .single();
+      
+      data.created_user = createdUser;
+    }
+    
+    if (data.branch_id) {
+      const { data: branch } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('id', data.branch_id)
+        .single();
+      
+      data.branches = branch;
+    }
+    
+    if (data.board_id) {
+      const { data: board } = await supabase
+        .from('boards')
+        .select('id, name')
+        .eq('id', data.board_id)
+        .single();
+      
+      data.boards = board;
+    }
+      
+    return { data, error: null };
+  },
+
+  async confirmAndArchiveTask(taskId, confirmingUserId) {
+    try {
+      const { data, error } = await supabase
+        .rpc('archive_task_to_history', {
+          task_uuid: taskId,
+          confirming_user_id: confirmingUserId
+        });
+        
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      console.error('Error confirming task:', error);
+      return { success: false, error };
+    }
+  },
+
+  async getPendingReviewTasks() {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        created_user:users!tasks_created_by_fkey(id, full_name),
+        branches(id, name),
+        boards(id, name)
+      `)
+      .eq('status', 'completed')
+      .eq('is_confirmed', false)
+      .order('completed_at', { ascending: true });
+    
+    if (error) return { data: null, error };
+
+    for (const task of data) {
+      const { data: assignedUsers } = await supabase
+        .rpc('get_task_assigned_users', { task_uuid: task.id });
+      
+      task.assigned_users = assignedUsers || [];
+    }
+      
+    return { data, error };
+  },
+
+  async getTaskHistory(userId, isAdmin) {
+    let query = supabase
+      .from('task_history')
+      .select('*')
+      .order('confirmed_at', { ascending: false });
+      
+    if (!isAdmin) {
+      query = query.eq('assigned_to', userId);
+    }
+    
+    const { data, error } = await query;
+    return { data, error };
+  },
+
+  async getPendingReviewCount() {
+    const { count, error } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'completed')
+      .eq('is_confirmed', false);
+      
+    return { count: count || 0, error };
+  },
+
+  async getAllTasksForBoard(boardId) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('board_id', boardId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching tasks for board:', error);
+      throw error;
+    }
+
+    const tasksWithDetails = await Promise.all(
+      (data || []).map(async (task) => {
+        const { data: assignedUsers } = await supabase
+          .rpc('get_task_assigned_users', { task_uuid: task.id });
+        
+        let created_user = null;
+        if (task.created_by) {
+          const { data: createdUserData } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .eq('id', task.created_by)
+            .single();
+          created_user = createdUserData;
+        }
+        
+        let branches = null;
+        if (task.branch_id) {
+          const { data: branchData } = await supabase
+            .from('branches')
+            .select('id, name')
+            .eq('id', task.branch_id)
+            .single();
+          branches = branchData;
+        }
+        
+        let boards = null;
+        if (task.board_id) {
+          const { data: boardData } = await supabase
+            .from('boards')
+            .select('id, name')
+            .eq('id', task.board_id)
+            .single();
+          boards = boardData;
+        }
+        
+        return {
+          ...task,
+          branch_name: branches?.name,
+          assigned_users: assignedUsers || [],
+          created_user,
+          branches,
+          boards
+        };
+      })
+    );
+
+    return tasksWithDetails;
+  },
+
+  async getAllUsers() {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name, name, email, role')
+      .eq('status', 'approved')
+      .in('role', ['admin', 'staff'])
+      .order('full_name');
+
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+};
+
 export default {
   supabase,
   getCurrentUserProfile,
@@ -740,5 +1132,6 @@ export default {
   productAPI,
   quotationAPI,
   projectAPI,
-  kanbanAPI 
+  kanbanAPI,
+  taskAPI
 }

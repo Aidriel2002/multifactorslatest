@@ -42,13 +42,11 @@ function CreateQuotation1() {
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [generatingRefNumber, setGeneratingRefNumber] = useState(true);
 
-  // Generate reference number on component mount
   useEffect(() => {
     const generateReferenceNumber = async () => {
       try {
         setGeneratingRefNumber(true);
         
-        // Get the last quotation ordered by reference number (descending)
         const { data, error } = await supabase
           .from('quotations')
           .select('reference_number')
@@ -57,24 +55,20 @@ function CreateQuotation1() {
 
         if (error) throw error;
 
-        let nextNumber = 1; // Default if no quotations exist
+        let nextNumber = 1; 
         
         if (data && data.length > 0 && data[0].reference_number) {
-          // Parse the last reference number (format: Q-YYYY-NNNN)
           const lastRefNumber = data[0].reference_number;
           const parts = lastRefNumber.split('-');
           
           if (parts.length === 3) {
-            // Extract the sequential number (last part)
             const lastSequentialNumber = parseInt(parts[2], 10);
             nextNumber = lastSequentialNumber + 1;
           }
         }
         
-        // Get current year
         const currentYear = new Date().getFullYear();
         
-        // Format reference number: Q-YYYY-NNNN
         const refNumber = `Q-${currentYear}-${nextNumber}`;
         
         setFormData(prev => ({ ...prev, referenceNumber: refNumber }));
@@ -89,18 +83,15 @@ function CreateQuotation1() {
     generateReferenceNumber();
   }, []);
 
-  // Load draft on component mount
   useEffect(() => {
     const loadDraft = () => {
       try {
         const savedDraft = localStorage.getItem(DRAFT_KEY);
         if (savedDraft) {
           const draft = JSON.parse(savedDraft);
-          // Load all form data including reference number from draft
           setFormData(draft.formData);
           setItems(draft.items);
           
-          // Restore signature previews
           if (draft.formData.preparedBySignature) {
             setPreparedSigPreview(draft.formData.preparedBySignature);
           }
@@ -118,7 +109,6 @@ function CreateQuotation1() {
     loadDraft();
   }, []);
 
-  // Auto-save draft whenever formData or items change
   useEffect(() => {
     const saveDraft = () => {
       try {
@@ -133,20 +123,17 @@ function CreateQuotation1() {
       }
     };
 
-    // Debounce the save to avoid too many writes
     const timeoutId = setTimeout(saveDraft, 1000);
     return () => clearTimeout(timeoutId);
   }, [formData, items]);
 
-  // Warn user before leaving page if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Check if there's a draft (meaning there are unsaved changes)
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft) {
         e.preventDefault();
-        e.returnValue = ''; // Chrome requires returnValue to be set
-        return ''; // Some browsers show this message
+        e.returnValue = ''; 
+        return ''; 
       }
     };
 
@@ -279,7 +266,6 @@ function CreateQuotation1() {
 
       if (itemsError) throw itemsError;
 
-      // Clear draft after successful submission
       clearDraft();
 
       alert('Quotation created successfully!');
@@ -294,13 +280,11 @@ function CreateQuotation1() {
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
-      // Clear the draft immediately and synchronously
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch (error) {
         console.error('Error clearing draft:', error);
       }
-      // Navigate back to quotation list
       navigate('/quotation');
     }
   };
@@ -309,11 +293,9 @@ function CreateQuotation1() {
     if (window.confirm('Are you sure you want to clear the saved draft? This cannot be undone.')) {
       clearDraft();
       
-      // Regenerate reference number
       try {
         setGeneratingRefNumber(true);
         
-        // Get the last quotation ordered by reference number (descending)
         const { data, error } = await supabase
           .from('quotations')
           .select('reference_number')
@@ -322,15 +304,13 @@ function CreateQuotation1() {
 
         if (error) throw error;
 
-        let nextNumber = 1; // Default if no quotations exist
+        let nextNumber = 1; 
         
         if (data && data.length > 0 && data[0].reference_number) {
-          // Parse the last reference number (format: Q-YYYY-NNNN)
           const lastRefNumber = data[0].reference_number;
           const parts = lastRefNumber.split('-');
           
           if (parts.length === 3) {
-            // Extract the sequential number (last part)
             const lastSequentialNumber = parseInt(parts[2], 10);
             nextNumber = lastSequentialNumber + 1;
           }
@@ -339,7 +319,6 @@ function CreateQuotation1() {
         const currentYear = new Date().getFullYear();
         const refNumber = `Q-${currentYear}-${nextNumber}`;
         
-        // Reset form with new reference number
         setFormData({
           referenceNumber: refNumber,
           companyName: '',
@@ -407,7 +386,6 @@ function CreateQuotation1() {
           subtitle="Fill in the quotation details"
         />
 
-        {/* Draft Banner */}
         {showDraftBanner && (
           <div className="mx-8 mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center">
@@ -438,7 +416,6 @@ function CreateQuotation1() {
 
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
-            {/* Auto-save indicator */}
             <div className="mb-4 flex justify-end">
               <span className="text-xs text-gray-500 italic">
                 ✓ Auto-saving draft...

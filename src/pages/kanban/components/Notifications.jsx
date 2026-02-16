@@ -73,7 +73,6 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
           filter: `user_id=eq.${currentUser.id}`
         },
         (payload) => {
-          console.log('New notification received:', payload);
           setNotifications(prev => [payload.new, ...prev]);
           setUnreadCount(prev => prev + 1);
         }
@@ -87,7 +86,6 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
           filter: `user_id=eq.${currentUser.id}`
         },
         (payload) => {
-          console.log('Notification updated:', payload);
           setNotifications(prev => 
             prev.map(n => n.id === payload.new.id ? payload.new : n)
           );
@@ -108,7 +106,6 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
           filter: `user_id=eq.${currentUser.id}`
         },
         (payload) => {
-          console.log('Notification deleted:', payload);
           setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
           if (!payload.old.is_read) {
             setUnreadCount(prev => Math.max(0, prev - 1));
@@ -116,7 +113,6 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
         }
       )
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
       });
 
     channelRef.current = channel;
@@ -182,6 +178,16 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
     
     setIsOpen(false);
     
+    // Handle task_completed notifications - redirect to review page
+    if (notification.type === 'task_completed') {
+      // Use the onNotificationClick callback to change view to 'review'
+      if (onNotificationClick) {
+        onNotificationClick({ type: 'navigate_to_review' });
+      }
+      return;
+    }
+    
+    // For other notifications, use the provided callback
     if (onNotificationClick) {
       onNotificationClick(notification);
     }
@@ -193,6 +199,12 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'task_updated':
         return <Edit className="w-5 h-5 text-blue-600" />;
+      case 'task_assigned':
+        return <Bell className="w-5 h-5 text-purple-600" />;
+      case 'task_moved':
+        return <Edit className="w-5 h-5 text-orange-600" />;
+      case 'comment_added':
+        return <MessageSquare className="w-5 h-5 text-purple-600" />;
       case 'new_comment':
         return <MessageSquare className="w-5 h-5 text-purple-600" />;
       case 'task_stale':

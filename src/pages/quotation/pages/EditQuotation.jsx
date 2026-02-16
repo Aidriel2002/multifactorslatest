@@ -44,7 +44,6 @@ function EditQuotation() {
     fetchQuotation();
   }, [id]);
 
-  // Auto-save draft whenever formData or items change (but only after initial load)
   useEffect(() => {
     if (initialLoadComplete) {
       const saveDraft = () => {
@@ -60,21 +59,18 @@ function EditQuotation() {
         }
       };
 
-      // Debounce the save to avoid too many writes
       const timeoutId = setTimeout(saveDraft, 1000);
       return () => clearTimeout(timeoutId);
     }
   }, [formData, items, initialLoadComplete]);
 
-  // Warn user before leaving page if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Check if there's a draft (meaning there are unsaved changes)
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       if (savedDraft && initialLoadComplete) {
         e.preventDefault();
-        e.returnValue = ''; // Chrome requires returnValue to be set
-        return ''; // Some browsers show this message
+        e.returnValue = ''; 
+        return ''; 
       }
     };
 
@@ -97,7 +93,6 @@ function EditQuotation() {
   const handleClearDraft = async () => {
     if (window.confirm('Are you sure you want to clear the saved draft and reload the original data?')) {
       clearDraft();
-      // Reload original data
       setLoading(true);
       setInitialLoadComplete(false);
       await fetchQuotation();
@@ -122,17 +117,14 @@ function EditQuotation() {
 
       if (itemsError) throw itemsError;
 
-      // Check if draft exists and load it
       const savedDraft = localStorage.getItem(DRAFT_KEY);
       
       if (savedDraft) {
-        // Load from draft
         try {
           const draft = JSON.parse(savedDraft);
           setFormData(draft.formData);
           setItems(draft.items);
           
-          // Restore signature previews
           if (draft.formData.preparedBySignature) {
             setPreparedSigPreview(draft.formData.preparedBySignature);
           }
@@ -143,11 +135,9 @@ function EditQuotation() {
           setShowDraftBanner(true);
         } catch (error) {
           console.error('Error loading draft:', error);
-          // If draft loading fails, use database data
           loadDatabaseData(quotationData, itemsData);
         }
       } else {
-        // Load from database
         loadDatabaseData(quotationData, itemsData);
       }
       
@@ -302,7 +292,6 @@ function EditQuotation() {
 
       if (itemsError) throw itemsError;
 
-      // Clear draft after successful submission
       clearDraft();
 
       alert('Quotation updated successfully!');
@@ -317,13 +306,11 @@ function EditQuotation() {
 
   const handleCancel = () => {
     if (window.confirm('Are you sure you want to cancel? All unsaved changes will be lost.')) {
-      // Clear the draft immediately and synchronously
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch (error) {
         console.error('Error clearing draft:', error);
       }
-      // Navigate back to view page
       navigate(`/quotation/view/${id}`);
     }
   };
@@ -351,7 +338,6 @@ function EditQuotation() {
           subtitle={`Reference: ${formData.referenceNumber}`}
         />
 
-        {/* Draft Banner */}
         {showDraftBanner && (
           <div className="mx-8 mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center">
@@ -382,7 +368,6 @@ function EditQuotation() {
 
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
-            {/* Auto-save indicator */}
             <div className="mb-4 flex justify-end">
               <span className="text-xs text-gray-500 italic">
                 ✓ Auto-saving draft...

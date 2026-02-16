@@ -43,16 +43,10 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
 
       if (staffBranchesError) throw staffBranchesError;
 
-      // Group staff by branch
+      // Group staff by branch - ALLOW MULTIPLE BRANCHES PER STAFF
       const staffGrouped = {};
-      const staffBranchMap = new Map();
-
-      staffBranchesData?.forEach(assignment => {
-        if (!assignment.staff_id || !assignment.branch_id) return;
-        staffBranchMap.set(assignment.staff_id, assignment.branch_id);
-      });
-
-      // Organize staff by branch
+      
+      // Initialize all branches with empty arrays
       branchesData?.forEach(branch => {
         staffGrouped[branch.id] = [];
       });
@@ -60,17 +54,27 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
       // Add "Unassigned" category
       staffGrouped['unassigned'] = [];
 
-      staffData?.forEach(staff => {
-        const branchId = staffBranchMap.get(staff.id);
+      // Create a Set to track which staff have been assigned to at least one branch
+      const assignedStaffIds = new Set();
+
+      // Add staff to ALL their assigned branches
+      staffBranchesData?.forEach(assignment => {
+        if (!assignment.staff_id || !assignment.branch_id) return;
         
-        if (!branchId) {
-          // Staff has no branch assigned
+        assignedStaffIds.add(assignment.staff_id);
+        
+        // Find the staff member
+        const staff = staffData?.find(s => s.id === assignment.staff_id);
+        
+        if (staff && staffGrouped[assignment.branch_id]) {
+          staffGrouped[assignment.branch_id].push(staff);
+        }
+      });
+
+      // Add unassigned staff (those not in any branch)
+      staffData?.forEach(staff => {
+        if (!assignedStaffIds.has(staff.id)) {
           staffGrouped['unassigned'].push(staff);
-        } else {
-          // Add staff to their assigned branch
-          if (staffGrouped[branchId]) {
-            staffGrouped[branchId].push(staff);
-          }
         }
       });
 

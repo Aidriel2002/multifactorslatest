@@ -46,13 +46,11 @@ function CreateQuotation2() {
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [generatingRefNumber, setGeneratingRefNumber] = useState(true);
 
-  // Generate reference number on component mount (shared with Quotation1)
   useEffect(() => {
     const generateReferenceNumber = async () => {
       try {
         setGeneratingRefNumber(true);
         
-        // Get the last quotation from BOTH quotation types ordered by created_at
         const { data, error } = await supabase
           .from('quotations')
           .select('reference_number')
@@ -61,24 +59,20 @@ function CreateQuotation2() {
 
         if (error) throw error;
 
-        let nextNumber = 1; // Default if no quotations exist
+        let nextNumber = 1; 
         
         if (data && data.length > 0 && data[0].reference_number) {
-          // Parse the last reference number (format: Q-YYYY-NNNN)
           const lastRefNumber = data[0].reference_number;
           const parts = lastRefNumber.split('-');
           
           if (parts.length === 3) {
-            // Extract the sequential number (last part)
             const lastSequentialNumber = parseInt(parts[2], 10);
             nextNumber = lastSequentialNumber + 1;
           }
         }
         
-        // Get current year
         const currentYear = new Date().getFullYear();
         
-        // Format reference number: Q-YYYY-NNNN
         const refNumber = `Q-${currentYear}-${nextNumber}`;
         
         setFormData(prev => ({ ...prev, referenceNumber: refNumber }));
@@ -93,7 +87,6 @@ function CreateQuotation2() {
     generateReferenceNumber();
   }, []);
 
-  // Load draft on component mount
   useEffect(() => {
     const loadDraft = () => {
       try {
@@ -104,7 +97,6 @@ function CreateQuotation2() {
           setItems(draft.items);
           setTotalPrice(draft.totalPrice || '');
           
-          // Restore signature previews
           if (draft.formData.preparedBySignature) {
             setPreparedSigPreview(draft.formData.preparedBySignature);
           }
@@ -122,7 +114,6 @@ function CreateQuotation2() {
     loadDraft();
   }, []);
 
-  // Auto-save draft whenever formData, items, or totalPrice change
   useEffect(() => {
     const saveDraft = () => {
       try {
@@ -138,12 +129,10 @@ function CreateQuotation2() {
       }
     };
 
-    // Debounce the save to avoid too many writes
     const timeoutId = setTimeout(saveDraft, 1000);
     return () => clearTimeout(timeoutId);
   }, [formData, items, totalPrice]);
 
-  // Warn user before leaving page if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
@@ -263,7 +252,6 @@ function CreateQuotation2() {
 
       if (itemsError) throw itemsError;
 
-      // Clear draft after successful submission
       clearDraft();
 
       alert('Quotation created successfully!');
@@ -291,7 +279,6 @@ function CreateQuotation2() {
     if (window.confirm('Are you sure you want to clear the saved draft? This cannot be undone.')) {
       clearDraft();
       
-      // Regenerate reference number
       try {
         setGeneratingRefNumber(true);
         
@@ -318,7 +305,6 @@ function CreateQuotation2() {
         const currentYear = new Date().getFullYear();
         const refNumber = `Q-${currentYear}-${nextNumber}`;
         
-        // Reset form with new reference number
         setFormData({
           referenceNumber: refNumber,
           companyName: '',
@@ -393,7 +379,6 @@ function CreateQuotation2() {
           subtitle="Fill in the quotation details"
         />
 
-        {/* Draft Banner */}
         {showDraftBanner && (
           <div className="mx-8 mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center">
@@ -424,7 +409,6 @@ function CreateQuotation2() {
 
         <div className="p-8 max-w-6xl mx-auto">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-8">
-            {/* Auto-save indicator */}
             <div className="mb-4 flex justify-end">
               <span className="text-xs text-gray-500 italic">
                 ✓ Auto-saving draft...

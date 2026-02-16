@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, User, AlertCircle } from 'lucide-react';
+import { X, Calendar, User, AlertCircle, UserPlus, XCircle } from 'lucide-react';
 
 const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
   const [formData, setFormData] = useState({
@@ -7,20 +7,31 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
     description: '',
     status: 'todo',
     priority: 'medium',
-    assigned_to: '',
+    assigned_to: [],
     due_date: ''
   });
 
   const [errors, setErrors] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
 
   useEffect(() => {
     if (task) {
+      // Handle assigned_users array from junction table
+      let assignedIds = [];
+      if (task.assigned_users && Array.isArray(task.assigned_users)) {
+        assignedIds = task.assigned_users.map(u => u.id);
+      } else if (task.assigned_to) {
+        // Fallback to single assigned_to
+        assignedIds = [task.assigned_to];
+      }
+      
       setFormData({
         title: task.title || '',
         description: task.description || '',
         status: task.status || 'todo',
         priority: task.priority || 'medium',
-        assigned_to: task.assigned_to || '',
+        assigned_to: assignedIds,
         due_date: task.due_date || ''
       });
     } else {
@@ -34,10 +45,11 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
       description: '',
       status: 'todo',
       priority: 'medium',
-      assigned_to: '',
+      assigned_to: [],
       due_date: ''
     });
     setErrors({});
+    setSearchTerm('');
   };
 
   const validateForm = () => {
@@ -61,7 +73,7 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
       description: formData.description.trim(),
       status: formData.status,
       priority: formData.priority,
-      assigned_to: formData.assigned_to || null,
+      assigned_to: formData.assigned_to.length > 0 ? formData.assigned_to : null,
       due_date: formData.due_date || null
     };
 
@@ -72,6 +84,36 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
     resetForm();
     onClose();
   };
+
+  const addStaff = (userId) => {
+    if (!formData.assigned_to.includes(userId)) {
+      setFormData({
+        ...formData,
+        assigned_to: [...formData.assigned_to, userId]
+      });
+    }
+    setSearchTerm('');
+    setShowStaffDropdown(false);
+  };
+
+  // Remove staff from assigned list
+  const removeStaff = (userId) => {
+    setFormData({
+      ...formData,
+      assigned_to: formData.assigned_to.filter(id => id !== userId)
+    });
+  };
+
+  // Get user details by ID
+  const getUserById = (userId) => {
+    return users.find(user => user.id === userId);
+  };
+
+  // Filter available staff (not already assigned)
+  const availableStaff = users.filter(user => 
+    !formData.assigned_to.includes(user.id) &&
+    (user.name || user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!isOpen) return null;
 
@@ -179,36 +221,98 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             </div>
           </div>
 
-          {/* Assign & Due Date */}
+          {/* Assign Staff (Multi-select) & Due Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Assign To */}
+            {/* Assign To Multiple Staff */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <User size={16} className="inline mr-1" />
-                Assign To
+                <UserPlus size={16} className="inline mr-1" />
+                Assign Staff
               </label>
 
-              <select
-                value={formData.assigned_to}
-                onChange={(e) =>
-                  setFormData({ ...formData, assigned_to: e.target.value })
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
-                disabled={saving}
-              >
-                <option value="">Unassigned</option>
+              {/* Selected Staff Tags */}
+              {formData.assigned_to.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.assigned_to.map(userId => {
+                    const user = getUserById(userId);
+                    return (
+                      <div
+                        key={userId}
+                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                      >
+                        <User size={14} />
+                        <span>{user?.name || user?.full_name || 'Unknown'}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeStaff(userId)}
+                          className="hover:text-blue-900"
+                          disabled={saving}
+                        >
+                          <XCircle size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-                {users.length === 0 && (
-                  <option disabled>No staff available</option>
+              {/* Add Staff Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setShowStaffDropdown(true);
+                  }}
+                  onFocus={() => setShowStaffDropdown(true)}
+                  placeholder="Search and add staff..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
+                  disabled={saving}
+                />
+
+                {/* Staff Dropdown */}
+                {showStaffDropdown && availableStaff.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {availableStaff.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => addStaff(user.id)}
+                        className="w-full px-4 py-2 text-left hover:bg-blue-50 flex items-center gap-2 border-b last:border-b-0"
+                      >
+                        <User size={16} className="text-gray-500" />
+                        <span className="font-medium">
+                          {user.name || user.full_name || 'Unnamed'}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          ({user.role})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 )}
 
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name || user.full_name || 'Unnamed'} ({user.role})
-                  </option>
-                ))}
-              </select>
+                {/* No staff available message */}
+                {showStaffDropdown && availableStaff.length === 0 && searchTerm && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-sm text-gray-500">
+                    No staff found
+                  </div>
+                )}
+              </div>
+
+              {/* Clear all button */}
+              {formData.assigned_to.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, assigned_to: [] })}
+                  className="mt-2 text-sm text-red-600 hover:text-red-700"
+                  disabled={saving}
+                >
+                  Clear all staff
+                </button>
+              )}
             </div>
 
             {/* Due Date */}
@@ -228,6 +332,15 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
               />
             </div>
           </div>
+
+          {/* Assignment Summary */}
+          {formData.assigned_to.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>{formData.assigned_to.length}</strong> staff member{formData.assigned_to.length !== 1 ? 's' : ''} assigned to this task
+              </p>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex items-center justify-end space-x-4 pt-4 border-t">

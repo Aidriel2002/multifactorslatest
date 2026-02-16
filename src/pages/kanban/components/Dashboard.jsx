@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Plus, 
   Building2, 
@@ -10,8 +10,14 @@ import {
   AlertCircle,
   Trophy,
   MapPin,
-  UserCircle
+  UserCircle,
+  X,
+  Calendar,
+  User,
+  MessageSquare
 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import CommentSection from './CommentSection';
 
 const Dashboard = ({ 
   branches = [], 
@@ -19,28 +25,60 @@ const Dashboard = ({
   users = [], 
   currentUser,
   onAddBranch,
-  onSelectBranch 
+  onSelectBranch,
+  onMarkCommentsAsRead,
+  onTasksRefresh
 }) => {
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [newBranch, setNewBranch] = useState({
     name: '',
     description: '',
     location: '',
     manager_id: ''
   });
+  const [realtimeTasks, setRealtimeTasks] = useState(tasks);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Calculate overall statistics
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length;
-  const todoTasks = tasks.filter(t => t.status === 'todo').length;
+  useEffect(() => {
+    setRealtimeTasks(tasks);
+
+    const channel = supabase
+      .channel('dashboard-comments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_comments'
+        },
+        async (payload) => {
+
+          if (onTasksRefresh) {
+            await onTasksRefresh();
+          }
+          
+          setRefreshTrigger(prev => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tasks, onTasksRefresh]);
+
+  const totalTasks = realtimeTasks.length;
+  const completedTasks = realtimeTasks.filter(t => t.status === 'completed').length;
+  const inProgressTasks = realtimeTasks.filter(t => t.status === 'in-progress').length;
+  const todoTasks = realtimeTasks.filter(t => t.status === 'todo').length;
   const overallCompletionRate = totalTasks > 0 
     ? Math.round((completedTasks / totalTasks) * 100) 
     : 0;
 
-  // Calculate branch statistics
   const branchStats = branches.map(branch => {
-    const branchTasks = tasks.filter(t => t.branch_id === branch.id);
+    const branchTasks = realtimeTasks.filter(t => t.branch_id === branch.id);
     const branchCompleted = branchTasks.filter(t => t.status === 'completed').length;
     const branchTotal = branchTasks.length;
     const completionRate = branchTotal > 0 
@@ -55,14 +93,23 @@ const Dashboard = ({
     };
   }).sort((a, b) => b.completionRate - a.completionRate);
 
-  // Calculate staff statistics
+  // Calculate staff statistics with real-time unread count
   const staffStats = users.map(user => {
-    const userTasks = tasks.filter(t => t.assigned_to === user.id);
+    const userTasks = realtimeTasks.filter(t => t.assigned_to === user.id);
     const userCompleted = userTasks.filter(t => t.status === 'completed').length;
     const userTotal = userTasks.length;
     const completionRate = userTotal > 0 
       ? Math.round((userCompleted / userTotal) * 100) 
       : 0;
+
+    // Count unread comments
+    const unreadComments = userTasks.reduce((total, task) => {
+      if (!task.comments) return total;
+      const unreadInTask = task.comments.filter(comment => 
+        !comment.read_by || !comment.read_by.includes(currentUser?.id)
+      ).length;
+      return total + unreadInTask;
+    }, 0);
 
     return {
       id: user.id,
@@ -70,7 +117,9 @@ const Dashboard = ({
       totalTasks: userTotal,
       completed: userCompleted,
       inProgress: userTasks.filter(t => t.status === 'in-progress').length,
-      completionRate
+      completionRate,
+      tasks: userTasks,
+      unreadComments
     };
   }).sort((a, b) => b.completionRate - a.completionRate);
 
@@ -83,6 +132,22 @@ const Dashboard = ({
     await onAddBranch(newBranch);
     setNewBranch({ name: '', description: '', location: '', manager_id: '' });
     setShowBranchModal(false);
+  };
+
+  const handleStaffClick = (staff) => {
+    setSelectedStaff(staff);
+  };
+
+  const handleTaskClick = async (task) => {
+    setSelectedTask(task);
+    // Mark comments as read
+    if (onMarkCommentsAsRead && task.comments && task.comments.length > 0) {
+      await onMarkCommentsAsRead(task.id);
+      // Trigger refresh after marking as read
+      if (onTasksRefresh) {
+        await onTasksRefresh();
+      }
+    }
   };
 
   const StatCard = ({ icon: Icon, label, value, color, subtitle, trend }) => (
@@ -110,7 +175,7 @@ const Dashboard = ({
   );
 
   const StaffCard = ({ staff, rank }) => (
-    <div className="staff-card">
+    <div className="staff-card" onClick={() => handleStaffClick(staff)}>
       <div className="staff-header">
         {rank <= 3 && (
           <div className={`
@@ -123,14 +188,21 @@ const Dashboard = ({
         <div className="staff-name-section">
           <div className="staff-name-row">
             <span className="staff-name">{staff.name}</span>
-            <span className={`
-              completion-badge
-              ${staff.completionRate >= 80 ? 'badge-green' :
-                staff.completionRate >= 50 ? 'badge-yellow' :
-                'badge-red'}
-            `}>
-              {staff.completionRate}%
-            </span>
+            <div className="staff-badges">
+              {staff.unreadComments > 0 && (
+                <span className="notification-badge">
+                  {staff.unreadComments}
+                </span>
+              )}
+              <span className={`
+                completion-badge
+                ${staff.completionRate >= 80 ? 'badge-green' :
+                  staff.completionRate >= 50 ? 'badge-yellow' :
+                  'badge-red'}
+              `}>
+                {staff.completionRate}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -210,6 +282,248 @@ const Dashboard = ({
       </div>
     </div>
   );
+
+  const TaskCommentsModal = ({ task, onClose }) => {
+    if (!task) return null;
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const priorityColors = {
+      low: 'bg-blue-100 text-blue-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-red-100 text-red-800'
+    };
+
+    const statusColors = {
+      'todo': 'bg-gray-100 text-gray-800',
+      'in-progress': 'bg-blue-100 text-blue-800',
+      'validating': 'bg-purple-100 text-purple-800',
+      'completed': 'bg-green-100 text-green-800'
+    };
+
+    const statusLabels = {
+      'todo': 'To Do',
+      'in-progress': 'In Progress',
+      'validating': 'Validating',
+      'completed': 'Completed'
+    };
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div 
+          className="task-comments-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="task-comments-header">
+            <div className="task-comments-title-section">
+              <MessageSquare className="w-6 h-6 text-blue-600" />
+              <div className="task-comments-title-content">
+                <h2 className="task-comments-title">{task.title}</h2>
+                <div className="task-comments-badges">
+                  <span className={`task-badge ${statusColors[task.status]}`}>
+                    {statusLabels[task.status]}
+                  </span>
+                  <span className={`task-badge ${priorityColors[task.priority]}`}>
+                    {task.priority?.charAt(0).toUpperCase() + task.priority?.slice(1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="modal-close-btn"
+              aria-label="Close modal"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="task-comments-content">
+            {/* Task Description */}
+            {task.description && (
+              <div className="task-description-section">
+                <h4 className="section-label">Description</h4>
+                <p className="task-description-text">{task.description}</p>
+              </div>
+            )}
+
+            {/* CommentSection Component */}
+            <div className="comments-section-wrapper">
+              <CommentSection task={task} currentUser={currentUser} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const StaffTasksModal = ({ staff, onClose }) => {
+    if (!staff) return null;
+
+    const formatDueDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric'
+      });
+    };
+
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const priorityColors = {
+      low: 'bg-blue-100 text-blue-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-red-100 text-red-800'
+    };
+
+    const statusColors = {
+      'todo': 'bg-gray-100 text-gray-800',
+      'in-progress': 'bg-blue-100 text-blue-800',
+      'validating': 'bg-purple-100 text-purple-800',
+      'completed': 'bg-green-100 text-green-800'
+    };
+
+    const statusLabels = {
+      'todo': 'To Do',
+      'in-progress': 'In Progress',
+      'validating': 'Validating',
+      'completed': 'Completed'
+    };
+
+    const getUnreadCommentCount = (task) => {
+      if (!task.comments) return 0;
+      return task.comments.filter(comment => 
+        !comment.read_by || !comment.read_by.includes(currentUser?.id)
+      ).length;
+    };
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div 
+          className="staff-tasks-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="staff-modal-header">
+            <div className="staff-modal-title-section">
+              <UserCircle className="w-8 h-8 text-blue-600" />
+              <div>
+                <h2 className="staff-modal-title">{staff.name}'s Tasks</h2>
+                <p className="staff-modal-subtitle">
+                  {staff.totalTasks} {staff.totalTasks === 1 ? 'task' : 'tasks'} • {staff.completionRate}% completion rate
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="modal-close-btn"
+              aria-label="Close modal"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="staff-modal-content">
+            {staff.tasks.length === 0 ? (
+              <div className="staff-empty-state">
+                <ListChecks className="empty-icon" />
+                <p className="empty-text">No tasks assigned yet</p>
+              </div>
+            ) : (
+              <div className="tasks-list">
+                {staff.tasks.map((task) => {
+                  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
+                  const unreadCount = getUnreadCommentCount(task);
+                  const commentCount = task.comments ? task.comments.length : 0;
+                  
+                  return (
+                    <div 
+                      key={task.id} 
+                      className="task-detail-card clickable"
+                      onClick={() => handleTaskClick(task)}
+                    >
+                      {/* Task Header */}
+                      <div className="task-detail-header">
+                        <div className="task-title-row">
+                          <h3 className="task-detail-title">{task.title}</h3>
+                          {commentCount > 0 && (
+                            <div className="task-comment-indicator">
+                              <MessageSquare className="w-4 h-4" />
+                              <span>{commentCount}</span>
+                              {unreadCount > 0 && (
+                                <span className="unread-dot"></span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="task-badges">
+                          <span className={`task-badge ${statusColors[task.status]}`}>
+                            {statusLabels[task.status]}
+                          </span>
+                          <span className={`task-badge ${priorityColors[task.priority]}`}>
+                            {task.priority?.charAt(0).toUpperCase() + task.priority?.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Task Description */}
+                      {task.description && (
+                        <div className="task-detail-description">
+                          <p>{task.description}</p>
+                        </div>
+                      )}
+
+                      {/* Task Meta */}
+                      <div className="task-detail-meta">
+                        {task.due_date && (
+                          <div className="task-meta-item">
+                            <Calendar size={16} className="task-meta-icon" />
+                            <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                              Due: {formatDueDate(task.due_date)}
+                              {isOverdue && ' (Overdue)'}
+                            </span>
+                          </div>
+                        )}
+                        <div className="task-meta-item">
+                          <Clock size={16} className="task-meta-icon" />
+                          <span>Created: {formatDate(task.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -597,11 +911,15 @@ const Dashboard = ({
           padding: 1rem;
           border-radius: 0.5rem;
           border: 1px solid #e5e7eb;
-          transition: box-shadow 0.2s;
+          transition: all 0.2s;
+          cursor: pointer;
+          position: relative;
         }
 
         .staff-card:hover {
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+          border-color: #2563eb;
         }
 
         .staff-header {
@@ -631,6 +949,7 @@ const Dashboard = ({
         .staff-name-section {
           flex: 1;
           min-width: 0;
+          position: relative;
         }
 
         .staff-name-row {
@@ -646,6 +965,45 @@ const Dashboard = ({
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+
+        .staff-badges {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          flex-shrink: 0;
+          position: relative;
+        }
+
+        .notification-badge {
+          position: absolute;
+          top: -0.75rem;
+          right: -0.5rem;
+          background: #ef4444;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: bold;
+          padding: 0.25rem 0.5rem;
+          border-radius: 9999px;
+          min-width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+          border: 2px solid white;
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          z-index: 10;
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.8;
+          }
         }
 
         .completion-badge {
@@ -957,6 +1315,323 @@ const Dashboard = ({
         .btn-primary:hover {
           background: #1d4ed8;
         }
+
+        /* Staff Tasks Modal */
+        .staff-tasks-modal {
+          background: white;
+          border-radius: 1rem;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+          max-width: 56rem;
+          width: 100%;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .staff-modal-header {
+          padding: 1.5rem;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: white;
+          flex-shrink: 0;
+        }
+
+        .staff-modal-title-section {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .staff-modal-title {
+          font-size: 1.5rem;
+          font-weight: bold;
+          color: #111827;
+        }
+
+        @media (min-width: 768px) {
+          .staff-modal-title {
+            font-size: 1.875rem;
+          }
+        }
+
+        .staff-modal-subtitle {
+          font-size: 0.875rem;
+          color: #6b7280;
+          margin-top: 0.25rem;
+        }
+
+        .modal-close-btn {
+          color: #9ca3af;
+          transition: all 0.2s;
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          flex-shrink: 0;
+        }
+
+        .modal-close-btn:hover {
+          color: #4b5563;
+          background: #f3f4f6;
+        }
+
+        .staff-modal-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1.5rem;
+        }
+
+        .staff-empty-state {
+          text-align: center;
+          padding: 3rem 1rem;
+        }
+
+        .staff-empty-state .empty-icon {
+          width: 4rem;
+          height: 4rem;
+          color: #d1d5db;
+          margin: 0 auto 1rem;
+        }
+
+        .staff-empty-state .empty-text {
+          color: #6b7280;
+          font-size: 1rem;
+        }
+
+        .tasks-list {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .task-detail-card {
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 0.75rem;
+          padding: 1.25rem;
+          transition: all 0.2s;
+        }
+
+        .task-detail-card.clickable {
+          cursor: pointer;
+        }
+
+        .task-detail-card.clickable:hover {
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+          border-color: #2563eb;
+        }
+
+        .task-detail-header {
+          margin-bottom: 1rem;
+        }
+
+        .task-title-row {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .task-detail-title {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #111827;
+          line-height: 1.4;
+          flex: 1;
+        }
+
+        .task-comment-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.375rem 0.625rem;
+          background: #eff6ff;
+          color: #2563eb;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+          font-weight: 500;
+          flex-shrink: 0;
+          position: relative;
+        }
+
+        .unread-dot {
+          position: absolute;
+          top: -0.125rem;
+          right: -0.125rem;
+          width: 0.5rem;
+          height: 0.5rem;
+          background: #ef4444;
+          border: 2px solid white;
+          border-radius: 9999px;
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .task-badges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .task-badge {
+          padding: 0.375rem 0.75rem;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .task-detail-description {
+          margin-bottom: 1rem;
+          padding: 1rem;
+          background: #f9fafb;
+          border-radius: 0.5rem;
+        }
+
+        .task-detail-description p {
+          color: #4b5563;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .task-detail-meta {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          padding-top: 0.75rem;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .task-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+
+        .task-meta-icon {
+          flex-shrink: 0;
+        }
+
+        /* Task Comments Modal */
+        .task-comments-modal {
+          background: white;
+          border-radius: 1rem;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+          max-width: 48rem;
+          width: 100%;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .task-comments-header {
+          padding: 1.5rem;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          background: white;
+          flex-shrink: 0;
+        }
+
+        .task-comments-title-section {
+          display: flex;
+          align-items: flex-start;
+          gap: 1rem;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .task-comments-title-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .task-comments-title {
+          font-size: 1.25rem;
+          font-weight: bold;
+          color: #111827;
+          margin-bottom: 0.5rem;
+          line-height: 1.4;
+        }
+
+        @media (min-width: 768px) {
+          .task-comments-title {
+            font-size: 1.5rem;
+          }
+        }
+
+        .task-comments-badges {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+
+        .task-comments-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 1.5rem;
+        }
+
+        .task-description-section {
+          margin-bottom: 1.5rem;
+          padding-bottom: 1.5rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .section-label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 0.75rem;
+        }
+
+        .task-description-text {
+          color: #4b5563;
+          line-height: 1.6;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .comments-section-wrapper {
+          margin-top: 1.5rem;
+        }
+
+        .comments-section-wrapper > div {
+          border-top: none;
+          padding-top: 0;
+        }
+
+        @media (max-width: 640px) {
+          .staff-tasks-modal,
+          .task-comments-modal {
+            border-radius: 1rem 1rem 0 0;
+            max-height: 95vh;
+          }
+
+          .staff-modal-header,
+          .task-comments-header {
+            padding: 1rem;
+          }
+
+          .staff-modal-title {
+            font-size: 1.25rem;
+          }
+
+          .staff-modal-content,
+          .task-comments-content {
+            padding: 1rem;
+          }
+        }
       `}</style>
 
       {/* Header */}
@@ -1131,7 +1806,6 @@ const Dashboard = ({
                   placeholder="Branch description..."
                 />
               </div>
-              
             </div>
             <div className="modal-footer">
               <button
@@ -1149,6 +1823,22 @@ const Dashboard = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Staff Tasks Modal */}
+      {selectedStaff && (
+        <StaffTasksModal 
+          staff={selectedStaff} 
+          onClose={() => setSelectedStaff(null)} 
+        />
+      )}
+
+      {/* Task Comments Modal */}
+      {selectedTask && (
+        <TaskCommentsModal 
+          task={selectedTask} 
+          onClose={() => setSelectedTask(null)} 
+        />
       )}
     </div>
   );

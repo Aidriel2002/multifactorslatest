@@ -25,7 +25,7 @@ export const SecureRoute = ({ children, requirePermission }) => {
           setHasPermission(true)
         }
       } catch (error) {
-        console.error('Error checking permission:', error)
+        console.error('❌ Error checking permission:', error)
         setHasPermission(false)
       } finally {
         setCheckingPermission(false)

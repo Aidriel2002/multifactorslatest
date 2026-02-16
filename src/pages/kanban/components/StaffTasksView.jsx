@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, AlertCircle, User, ArrowLeft, Plus, X } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, AlertCircle, User, ArrowLeft, Plus, X, Building2 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { getCurrentUserProfile } from '../../../lib/supabase';
 
@@ -18,14 +18,15 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
   const [taskDueDate, setTaskDueDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [staffBranch, setStaffBranch] = useState(null);
+  const [staffBranches, setStaffBranches] = useState([]); // Changed to array for multiple branches
+  const [branchMap, setBranchMap] = useState({}); // Map of branch_id to branch data
 
   useEffect(() => {
     if (staff?.id) {
       loadStaffTasks();
       loadCurrentUser();
       loadBranches();
-      loadStaffBranch();
+      loadStaffBranches();
     }
   }, [staff?.id]);
 
@@ -38,12 +39,12 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     }
   }, [selectedBranch]);
 
-  // Auto-select staff's branch if they have one
+  // Auto-select staff's first branch if they have one
   useEffect(() => {
-    if (staffBranch && isAddTaskModalOpen) {
-      setSelectedBranch(staffBranch);
+    if (staffBranches.length > 0 && isAddTaskModalOpen && !selectedBranch) {
+      setSelectedBranch(staffBranches[0]);
     }
-  }, [staffBranch, isAddTaskModalOpen]);
+  }, [staffBranches, isAddTaskModalOpen]);
 
   const loadCurrentUser = async () => {
     try {
@@ -54,23 +55,24 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     }
   };
 
-  const loadStaffBranch = async () => {
+  const loadStaffBranches = async () => {
     if (!staff?.id) return;
 
     try {
       const { data, error } = await supabase
         .from('staff_branches')
         .select('branch_id')
-        .eq('staff_id', staff.id)
-        .single();
+        .eq('staff_id', staff.id);
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading staff branch:', error);
-      } else if (data) {
-        setStaffBranch(data.branch_id);
+        console.error('Error loading staff branches:', error);
+      } else if (data && data.length > 0) {
+        setStaffBranches(data.map(item => item.branch_id));
+      } else {
+        setStaffBranches([]);
       }
     } catch (err) {
-      console.error('Error loading staff branch:', err);
+      console.error('Error loading staff branches:', err);
     }
   };
 
@@ -82,7 +84,15 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
+      
       setBranches(data || []);
+      
+      // Create branch map for quick lookups
+      const map = {};
+      data?.forEach(branch => {
+        map[branch.id] = branch;
+      });
+      setBranchMap(map);
     } catch (err) {
       console.error('Error loading branches:', err);
     }
@@ -165,8 +175,8 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
       setTaskDescription('');
       setTaskPriority('medium');
       setTaskDueDate('');
-      // Only reset branch if staff doesn't have a default branch
-      if (!staffBranch) {
+      // Only reset branch if staff doesn't have assigned branches
+      if (staffBranches.length === 0) {
         setSelectedBranch('');
       }
       setSelectedBoard('');
@@ -243,8 +253,8 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
   const stats = getStatusStats();
   const filteredTasks = getFilteredTasks();
 
-  // Check if staff has a branch assigned
-  const staffHasBranch = Boolean(staffBranch);
+  // Check if staff has branches assigned
+  const staffHasBranches = staffBranches.length > 0;
 
   const FilterButton = ({ value, label, count, icon: Icon }) => (
     <button
@@ -265,48 +275,60 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     </button>
   );
 
-  const TaskCard = ({ task }) => (
-    <div
-      onClick={() => onTaskClick(task)}
-      className="task-card"
-    >
-      <div className="flex items-start justify-between task-title">
-        <h3 className="font-semibold text-gray-900 flex-1 pr-2 line-clamp-2">
-          {task.title}
-        </h3>
-      </div>
-
-      {task.description && (
-        <p className="task-description text-gray-600 line-clamp-2">
-          {task.description}
-        </p>
-      )}
-
-      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-        <span className={`task-badge rounded font-medium border ${getStatusColor(task.status)}`}>
-          {task.status.replace('-', ' ')}
-        </span>
-        
-        {task.priority && (
-          <span className={`task-badge rounded font-medium border ${getPriorityColor(task.priority)}`}>
-            {task.priority}
+  const TaskCard = ({ task }) => {
+    const branchName = branchMap[task.branch_id]?.name || 'Unknown Branch';
+    
+    return (
+      <div
+        onClick={() => onTaskClick(task)}
+        className="task-card"
+      >
+        {/* Branch Name Badge at Top */}
+        <div className="flex items-center gap-1.5 mb-2">
+          <Building2 className="w-3.5 h-3.5 text-blue-600" />
+          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+            {branchName}
           </span>
+        </div>
+
+        <div className="flex items-start justify-between task-title">
+          <h3 className="font-semibold text-gray-900 flex-1 pr-2 line-clamp-2">
+            {task.title}
+          </h3>
+        </div>
+
+        {task.description && (
+          <p className="task-description text-gray-600 line-clamp-2">
+            {task.description}
+          </p>
         )}
-        
-        {task.due_date && (
-          <span className={`flex items-center gap-1 text-xs ${
-            isOverdue(task) ? 'text-red-600 font-semibold' : 'text-gray-500'
-          }`}>
-            <Calendar className="w-3 h-3" />
-            <span className="date-full">{formatDate(task.due_date)}</span>
-            <span className="date-short">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-            {isOverdue(task) && <span className="overdue-full">(Overdue)</span>}
-            {isOverdue(task) && <span className="overdue-short">!</span>}
+
+        <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+          <span className={`task-badge rounded font-medium border ${getStatusColor(task.status)}`}>
+            {task.status.replace('-', ' ')}
           </span>
-        )}
+          
+          {task.priority && (
+            <span className={`task-badge rounded font-medium border ${getPriorityColor(task.priority)}`}>
+              {task.priority}
+            </span>
+          )}
+          
+          {task.due_date && (
+            <span className={`flex items-center gap-1 text-xs ${
+              isOverdue(task) ? 'text-red-600 font-semibold' : 'text-gray-500'
+            }`}>
+              <Calendar className="w-3 h-3" />
+              <span className="date-full">{formatDate(task.due_date)}</span>
+              <span className="date-short">{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              {isOverdue(task) && <span className="overdue-full">(Overdue)</span>}
+              {isOverdue(task) && <span className="overdue-short">!</span>}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -943,25 +965,30 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
             </div>
 
             <div className="modal-body">
-              {/* Only show branch selector if staff doesn't have a branch */}
-              {!staffHasBranch && (
-                <div className="form-group">
-                  <label className="form-label">Branch *</label>
-                  <select
-                    value={selectedBranch}
-                    onChange={(e) => setSelectedBranch(e.target.value)}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">Select Branch</option>
-                    {branches.map(branch => (
+              {/* Show branch selector - filter to only staff's assigned branches if they have any */}
+              <div className="form-group">
+                <label className="form-label">Branch *</label>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="form-select"
+                  required
+                >
+                  <option value="">Select Branch</option>
+                  {branches
+                    .filter(branch => !staffHasBranches || staffBranches.includes(branch.id))
+                    .map(branch => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
                       </option>
                     ))}
-                  </select>
-                </div>
-              )}
+                </select>
+                {staffHasBranches && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Showing only branches assigned to this staff member
+                  </p>
+                )}
+              </div>
 
               <div className="form-group">
                 <label className="form-label">Board *</label>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Building2, 
   MapPin, 
@@ -7,8 +7,12 @@ import {
   Trash2,
   Search,
   TrendingUp,
-  Plus
+  Plus,
+  Users,
+  UserPlus
 } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import AssignStaffModal from './AssignStaffModal';
 
 const CompanyList = ({ 
   branches = [], 
@@ -24,6 +28,9 @@ const CompanyList = ({
   const [filterBy, setFilterBy] = useState('all');
   const [editingBranch, setEditingBranch] = useState(null);
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showAssignStaffModal, setShowAssignStaffModal] = useState(false);
+  const [selectedBranchForStaff, setSelectedBranchForStaff] = useState(null);
+  const [branchStaff, setBranchStaff] = useState({});
   const [editForm, setEditForm] = useState({
     name: '',
     description: '',
@@ -35,12 +42,74 @@ const CompanyList = ({
     location: ''
   });
 
+  // Load staff assignments for all branches
+  useEffect(() => {
+    if (branches.length > 0) {
+      loadBranchStaff();
+    }
+  }, [branches]);
+
+  const loadBranchStaff = async () => {
+    try {
+      // First get all staff_branches relationships
+      const { data: staffBranchData, error: sbError } = await supabase
+        .from('staff_branches')
+        .select('branch_id, staff_id');
+
+      if (sbError) {
+        console.error('Error loading staff_branches:', sbError);
+        return;
+      }
+
+      if (!staffBranchData || staffBranchData.length === 0) {
+        setBranchStaff({});
+        return;
+      }
+
+      // Get unique staff IDs
+      const staffIds = [...new Set(staffBranchData.map(sb => sb.staff_id))];
+
+      // Fetch user details for those staff members
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', staffIds);
+
+      if (usersError) {
+        console.error('Error loading users:', usersError);
+        return;
+      }
+
+      // Create a map of user data
+      const userMap = {};
+      usersData?.forEach(user => {
+        userMap[user.id] = user;
+      });
+
+      // Organize staff by branch
+      const staffByBranch = {};
+      staffBranchData.forEach(item => {
+        if (!staffByBranch[item.branch_id]) {
+          staffByBranch[item.branch_id] = [];
+        }
+        if (userMap[item.staff_id]) {
+          staffByBranch[item.branch_id].push(userMap[item.staff_id]);
+        }
+      });
+
+      setBranchStaff(staffByBranch);
+    } catch (err) {
+      console.error('Error loading branch staff:', err);
+    }
+  };
+
   const branchesWithStats = branches.map(branch => {
     const branchTasks = tasks.filter(t => t.branch_id === branch.id);
     const completed = branchTasks.filter(t => t.status === 'completed').length;
     const inProgress = branchTasks.filter(t => t.status === 'in-progress').length;
     const total = branchTasks.length;
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const staffCount = branchStaff[branch.id]?.length || 0;
 
     return {
       ...branch,
@@ -48,7 +117,8 @@ const CompanyList = ({
         totalTasks: total,
         completed,
         inProgress,
-        completionRate
+        completionRate,
+        staffCount
       }
     };
   });
@@ -85,6 +155,12 @@ const CompanyList = ({
       description: branch.description || '',
       location: branch.location || ''
     });
+  };
+
+  const handleAssignStaffClick = (e, branch) => {
+    e.stopPropagation();
+    setSelectedBranchForStaff(branch);
+    setShowAssignStaffModal(true);
   };
 
   const handleDeleteClick = (e, branch) => {
@@ -157,6 +233,10 @@ const CompanyList = ({
     }
   };
 
+  const handleStaffUpdate = async () => {
+    await loadBranchStaff();
+  };
+
   const BranchCard = ({ branch }) => (
     <div 
       onClick={() => onSelectBranch(branch)}
@@ -165,22 +245,22 @@ const CompanyList = ({
       {/* Header */}
       <div className="p-4 md:p-6 border-b border-gray-100">
         <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="p-2 md:p-3 bg-blue-100 rounded-lg">
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+            <div className="p-2 md:p-3 bg-blue-100 rounded-lg flex-shrink-0">
               <Building2 className="w-5 md:w-6 h-5 md:h-6 text-blue-600" />
             </div>
-            <div>
-              <h3 className="text-base md:text-lg font-bold text-gray-900">{branch.name}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">{branch.name}</h3>
               {branch.location && (
                 <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1 mt-1">
-                  <MapPin className="w-3 md:w-4 h-3 md:h-4" />
-                  {branch.location}
+                  <MapPin className="w-3 md:w-4 h-3 md:h-4 flex-shrink-0" />
+                  <span className="truncate">{branch.location}</span>
                 </p>
               )}
             </div>
           </div>
           <span className={`
-            px-2 md:px-3 py-1 rounded-full text-xs font-bold
+            px-2 md:px-3 py-1 rounded-full text-xs font-bold flex-shrink-0
             ${branch.stats.completionRate >= 80 ? 'bg-green-100 text-green-700' :
               branch.stats.completionRate >= 50 ? 'bg-yellow-100 text-yellow-700' :
               'bg-red-100 text-red-700'}
@@ -191,6 +271,14 @@ const CompanyList = ({
         
         {branch.description && (
           <p className="text-xs md:text-sm text-gray-600 line-clamp-2">{branch.description}</p>
+        )}
+
+        {/* Staff Count Badge */}
+        {branch.stats.staffCount > 0 && (
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-xs font-medium">
+            <Users className="w-3.5 h-3.5" />
+            {branch.stats.staffCount} {branch.stats.staffCount === 1 ? 'Staff Member' : 'Staff Members'}
+          </div>
         )}
       </div>
 
@@ -234,6 +322,13 @@ const CompanyList = ({
         {isAdmin && (
           <div className="flex items-center gap-1 md:gap-2" onClick={(e) => e.stopPropagation()}>
             <button
+              onClick={(e) => handleAssignStaffClick(e, branch)}
+              className="p-1.5 md:p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              title="Assign Staff"
+            >
+              <UserPlus className="w-3.5 md:w-4 h-3.5 md:h-4" />
+            </button>
+            <button
               onClick={(e) => handleEditClick(e, branch)}
               className="p-1.5 md:p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               title="Edit Branch"
@@ -260,17 +355,19 @@ const CompanyList = ({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Branch List</h1>
-            <p className="text-sm md:text-base text-gray-600 mt-1">Manage all branches</p>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Manage all branches and staff</p>
           </div>
           {isAdmin && (
-            <button
-              onClick={() => setShowBranchModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md text-sm md:text-base"
-            >
-              <Plus className="w-4 md:w-5 h-4 md:h-5" />
-              <span className="hidden sm:inline">Add Branch</span>
-              <span className="sm:hidden">Add</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBranchModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-6 py-2 md:py-3 rounded-lg flex items-center gap-2 transition-colors shadow-md text-sm md:text-base"
+              >
+                <Plus className="w-4 md:w-5 h-4 md:h-5" />
+                <span className="hidden sm:inline">Add Branch</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -419,7 +516,7 @@ const CompanyList = ({
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal with Staff List */}
       {editingBranch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -463,6 +560,45 @@ const CompanyList = ({
                   placeholder="Enter description"
                 />
               </div>
+
+              {/* Assigned Staff Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Assigned Staff
+                  </label>
+                  <button
+                    onClick={() => {
+                      setSelectedBranchForStaff(editingBranch);
+                      setShowAssignStaffModal(true);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:bg-blue-50 px-2 py-1 rounded"
+                  >
+                    Manage
+                  </button>
+                </div>
+                
+                {branchStaff[editingBranch.id]?.length > 0 ? (
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {branchStaff[editingBranch.id].map(staff => (
+                      <div key={staff.id} className="flex items-center gap-2 p-2 bg-purple-50 rounded-lg">
+                        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                          {staff.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">{staff.full_name}</p>
+                          <p className="text-xs text-gray-600 truncate">{staff.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                    <Users className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">No staff assigned yet</p>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="p-4 md:p-6 border-t border-gray-200 flex justify-end gap-3">
               <button
@@ -484,6 +620,17 @@ const CompanyList = ({
           </div>
         </div>
       )}
+
+      {/* Assign Staff Modal */}
+      <AssignStaffModal
+        isOpen={showAssignStaffModal}
+        onClose={() => {
+          setShowAssignStaffModal(false);
+          setSelectedBranchForStaff(null);
+        }}
+        branch={selectedBranchForStaff}
+        onUpdate={handleStaffUpdate}
+      />
     </div>
   );
 };
