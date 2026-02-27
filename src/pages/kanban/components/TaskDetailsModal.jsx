@@ -1,7 +1,7 @@
 import { X, Calendar, User } from 'lucide-react';
 import CommentSection from './CommentSection';
 
-const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) => {
+const TaskDetailsModal = ({ isOpen, onClose, task, currentUser }) => {
   const formatDueDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -54,7 +54,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
         className="bg-white rounded-t-2xl sm:rounded-lg w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] overflow-hidden flex flex-col shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Improved mobile spacing and touch targets */}
         <div className="border-b px-4 sm:px-6 py-4 sm:py-4 flex items-center justify-between bg-white sticky top-0 z-10 shrink-0">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex-1 pr-2">Task Details</h2>
           <button
@@ -66,16 +65,12 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
           </button>
         </div>
 
-        {/* Content - Improved scrolling and spacing */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-5 sm:py-6">
-          {/* Task Info */}
           <div className="mb-6 sm:mb-8">
-            {/* Title - Better line height for readability */}
             <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 leading-tight break-words">
               {task.title}
             </h3>
 
-            {/* Badges - Better spacing on mobile */}
             <div className="flex flex-wrap gap-2 mb-5">
               <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${statusColors[task.status]}`}>
                 {statusLabels[task.status]}
@@ -85,7 +80,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
               </span>
             </div>
 
-            {/* Description - Improved readability */}
             {task.description && (
               <div className="mb-6">
                 <h4 className="font-semibold text-gray-700 mb-2 text-base">Description</h4>
@@ -95,9 +89,7 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
               </div>
             )}
 
-            {/* Meta Information - Better mobile layout */}
             <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
-              {/* Assigned To */}
               {task.assigned_user && (
                 <div className="flex items-start sm:items-center py-2 sm:py-0">
                   <User size={18} className="mr-3 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
@@ -108,7 +100,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
                 </div>
               )}
 
-              {/* Due Date */}
               {task.due_date && (
                 <div className="flex items-start sm:items-center py-2 sm:py-0">
                   <Calendar size={18} className="mr-3 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
@@ -122,7 +113,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
                 </div>
               )}
 
-              {/* Created By */}
               {task.created_user && (
                 <div className="flex items-start sm:items-center py-2 sm:py-0">
                   <User size={18} className="mr-3 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
@@ -133,7 +123,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
                 </div>
               )}
 
-              {/* Created At */}
               <div className="flex items-start sm:items-center py-2 sm:py-0">
                 <Calendar size={18} className="mr-3 text-gray-400 flex-shrink-0 mt-0.5 sm:mt-0" />
                 <div className="flex flex-col sm:flex-row sm:items-center min-w-0 flex-1">
@@ -144,7 +133,6 @@ const TaskDetailsModal = ({ isOpen, onClose, task, currentUser, onTaskUpdate }) 
             </div>
           </div>
 
-          {/* Comments Section */}
           <CommentSection task={task} currentUser={currentUser} />
         </div>
       </div>

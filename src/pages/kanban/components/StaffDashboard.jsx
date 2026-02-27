@@ -14,10 +14,13 @@ const StaffDashboard = ({
   currentUser,
   onTaskClick
 }) => {
-  // Filter only tasks assigned to current user
-  const myTasks = tasks.filter(t => t.assigned_to === currentUser?.id);
+  const myTasks = tasks.filter(t => {
+    if (t.assigned_users && Array.isArray(t.assigned_users)) {
+      return t.assigned_users.some(user => user.id === currentUser?.id);
+    }
+    return t.assigned_to === currentUser?.id;
+  });
 
-  // Calculate staff statistics
   const totalTasks = myTasks.length;
   const completedTasks = myTasks.filter(t => t.status === 'completed').length;
   const inProgressTasks = myTasks.filter(t => t.status === 'in-progress').length;

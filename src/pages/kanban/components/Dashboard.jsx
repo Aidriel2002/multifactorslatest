@@ -7,13 +7,11 @@ import {
   ListChecks,
   CheckCircle2,
   Clock,
-  AlertCircle,
   Trophy,
   MapPin,
   UserCircle,
   X,
   Calendar,
-  User,
   MessageSquare
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -39,7 +37,6 @@ const Dashboard = ({
     manager_id: ''
   });
   const [realtimeTasks, setRealtimeTasks] = useState(tasks);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     setRealtimeTasks(tasks);
@@ -53,13 +50,10 @@ const Dashboard = ({
           schema: 'public',
           table: 'task_comments'
         },
-        async (payload) => {
-
+        async () => {
           if (onTasksRefresh) {
             await onTasksRefresh();
           }
-          
-          setRefreshTrigger(prev => prev + 1);
         }
       )
       .subscribe();
@@ -93,9 +87,15 @@ const Dashboard = ({
     };
   }).sort((a, b) => b.completionRate - a.completionRate);
 
-  // Calculate staff statistics with real-time unread count
+  // Calculate staff statistics - FIXED: Check both assigned_users array and assigned_to field
   const staffStats = users.map(user => {
-    const userTasks = realtimeTasks.filter(t => t.assigned_to === user.id);
+    const userTasks = realtimeTasks.filter(t => {
+      const assignedUsers = t.assigned_users || [];
+      const isInAssignedUsers = assignedUsers.some(assignedUser => assignedUser.id === user.id);
+      const isAssignedTo = t.assigned_to === user.id;
+      return isInAssignedUsers || isAssignedTo;
+    });
+    
     const userCompleted = userTasks.filter(t => t.status === 'completed').length;
     const userTotal = userTasks.length;
     const completionRate = userTotal > 0 
@@ -140,17 +140,15 @@ const Dashboard = ({
 
   const handleTaskClick = async (task) => {
     setSelectedTask(task);
-    // Mark comments as read
     if (onMarkCommentsAsRead && task.comments && task.comments.length > 0) {
       await onMarkCommentsAsRead(task.id);
-      // Trigger refresh after marking as read
       if (onTasksRefresh) {
         await onTasksRefresh();
       }
     }
   };
 
-  const StatCard = ({ icon: Icon, label, value, color, subtitle, trend }) => (
+  const StatCard = ({ icon: Icon, label, value, color, subtitle }) => (
     <div className="stat-card">
       <div className="stat-card-content">
         <div className="stat-card-header">
@@ -164,13 +162,6 @@ const Dashboard = ({
           {subtitle && <p className="stat-subtitle">{subtitle}</p>}
         </div>
       </div>
-      {trend && (
-        <div className="stat-trend">
-          <TrendingUp className="trend-icon" />
-          <span className="trend-value">{trend}</span>
-          <span className="trend-text">vs last month</span>
-        </div>
-      )}
     </div>
   );
 
@@ -286,18 +277,6 @@ const Dashboard = ({
   const TaskCommentsModal = ({ task, onClose }) => {
     if (!task) return null;
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
-
     const priorityColors = {
       low: 'bg-blue-100 text-blue-800',
       medium: 'bg-yellow-100 text-yellow-800',
@@ -324,7 +303,6 @@ const Dashboard = ({
           className="task-comments-modal"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="task-comments-header">
             <div className="task-comments-title-section">
               <MessageSquare className="w-6 h-6 text-blue-600" />
@@ -349,9 +327,7 @@ const Dashboard = ({
             </button>
           </div>
 
-          {/* Content */}
           <div className="task-comments-content">
-            {/* Task Description */}
             {task.description && (
               <div className="task-description-section">
                 <h4 className="section-label">Description</h4>
@@ -359,7 +335,6 @@ const Dashboard = ({
               </div>
             )}
 
-            {/* CommentSection Component */}
             <div className="comments-section-wrapper">
               <CommentSection task={task} currentUser={currentUser} />
             </div>
@@ -427,7 +402,6 @@ const Dashboard = ({
           className="staff-tasks-modal"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
           <div className="staff-modal-header">
             <div className="staff-modal-title-section">
               <UserCircle className="w-8 h-8 text-blue-600" />
@@ -447,7 +421,6 @@ const Dashboard = ({
             </button>
           </div>
 
-          {/* Content */}
           <div className="staff-modal-content">
             {staff.tasks.length === 0 ? (
               <div className="staff-empty-state">
@@ -467,7 +440,6 @@ const Dashboard = ({
                       className="task-detail-card clickable"
                       onClick={() => handleTaskClick(task)}
                     >
-                      {/* Task Header */}
                       <div className="task-detail-header">
                         <div className="task-title-row">
                           <h3 className="task-detail-title">{task.title}</h3>
@@ -491,14 +463,12 @@ const Dashboard = ({
                         </div>
                       </div>
 
-                      {/* Task Description */}
                       {task.description && (
                         <div className="task-detail-description">
                           <p>{task.description}</p>
                         </div>
                       )}
 
-                      {/* Task Meta */}
                       <div className="task-detail-meta">
                         {task.due_date && (
                           <div className="task-meta-item">
@@ -536,7 +506,6 @@ const Dashboard = ({
           background: #f9fafb;
         }
 
-        /* Header Styles */
         .dashboard-header {
           background: white;
           border-bottom: 1px solid #e5e7eb;
@@ -616,7 +585,6 @@ const Dashboard = ({
           background: #1d4ed8;
         }
 
-        /* Main Content */
         .dashboard-content {
           padding: 1rem;
         }
@@ -654,7 +622,6 @@ const Dashboard = ({
           }
         }
 
-        /* Stat Cards - SINGLE ROW */
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -776,36 +743,6 @@ const Dashboard = ({
           }
         }
 
-        .stat-trend {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          font-size: 0.625rem;
-          margin-top: 0.5rem;
-        }
-
-        @media (min-width: 768px) {
-          .stat-trend {
-            font-size: 0.75rem;
-          }
-        }
-
-        .trend-icon {
-          width: 0.75rem;
-          height: 0.75rem;
-          color: #16a34a;
-        }
-
-        .trend-value {
-          color: #16a34a;
-          font-weight: 500;
-        }
-
-        .trend-text {
-          color: #6b7280;
-        }
-
-        /* Progress Section */
         .progress-section {
           background: linear-gradient(to bottom right, #eff6ff, #eef2ff);
           padding: 1rem;
@@ -887,7 +824,6 @@ const Dashboard = ({
           margin-top: 0.25rem;
         }
 
-        /* Staff Cards */
         .staff-grid {
           display: grid;
           grid-template-columns: 1fr;
@@ -1066,7 +1002,6 @@ const Dashboard = ({
         .progress-yellow { background: #eab308; }
         .progress-red { background: #ef4444; }
 
-        /* Branch Cards */
         .branch-grid {
           display: grid;
           grid-template-columns: 1fr;
@@ -1168,7 +1103,6 @@ const Dashboard = ({
           margin-bottom: 0.5rem;
         }
 
-        /* Empty State */
         .empty-state {
           grid-column: 1 / -1;
           text-align: center;
@@ -1207,7 +1141,6 @@ const Dashboard = ({
           background: #1d4ed8;
         }
 
-        /* Modal Styles */
         .modal-overlay {
           position: fixed;
           inset: 0;
@@ -1316,7 +1249,6 @@ const Dashboard = ({
           background: #1d4ed8;
         }
 
-        /* Staff Tasks Modal */
         .staff-tasks-modal {
           background: white;
           border-radius: 1rem;
@@ -1520,7 +1452,6 @@ const Dashboard = ({
           flex-shrink: 0;
         }
 
-        /* Task Comments Modal */
         .task-comments-modal {
           background: white;
           border-radius: 1rem;
@@ -1634,7 +1565,6 @@ const Dashboard = ({
         }
       `}</style>
 
-      {/* Header */}
       <div className="dashboard-header">
         <div className="header-content">
           <div>
@@ -1654,7 +1584,6 @@ const Dashboard = ({
       </div>
 
       <div className="dashboard-content">
-        {/* Overview Statistics - SINGLE ROW */}
         <section className="section">
           <h2 className="section-title">
             <TrendingUp className="w-5 h-5 text-blue-600" />
@@ -1689,7 +1618,6 @@ const Dashboard = ({
           </div>
         </section>
 
-        {/* Overall Progress */}
         <section className="section progress-section">
           <div className="progress-header">
             <h3 className="progress-title">Overall Company Progress</h3>
@@ -1717,7 +1645,6 @@ const Dashboard = ({
           </div>
         </section>
 
-        {/* Staff Performance */}
         <section className="section">
           <h2 className="section-title">
             <Users className="w-5 h-5 text-blue-600" />
@@ -1737,7 +1664,6 @@ const Dashboard = ({
           </div>
         </section>
 
-        {/* Productive Branches */}
         <section className="section">
           <h2 className="section-title">
             <Trophy className="w-5 h-5 text-yellow-500" />
@@ -1767,7 +1693,6 @@ const Dashboard = ({
         </section>
       </div>
 
-      {/* Add Branch Modal */}
       {showBranchModal && (
         <div className="modal-overlay" onClick={() => setShowBranchModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1825,7 +1750,6 @@ const Dashboard = ({
         </div>
       )}
 
-      {/* Staff Tasks Modal */}
       {selectedStaff && (
         <StaffTasksModal 
           staff={selectedStaff} 
@@ -1833,7 +1757,6 @@ const Dashboard = ({
         />
       )}
 
-      {/* Task Comments Modal */}
       {selectedTask && (
         <TaskCommentsModal 
           task={selectedTask} 

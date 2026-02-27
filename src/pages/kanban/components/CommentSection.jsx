@@ -60,7 +60,6 @@ const CommentSection = ({ task, currentUser }) => {
     }
   }, [task]);
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -78,7 +77,6 @@ const CommentSection = ({ task, currentUser }) => {
     try {
       setLoading(true);
       
-      // Use a join to fetch comments with user data in one query
       const { data: commentsData, error: commentsError } = await supabase
         .from('task_comments')
         .select(`
@@ -98,7 +96,6 @@ const CommentSection = ({ task, currentUser }) => {
         return;
       }
 
-      // Format comments with user data
       const formattedComments = commentsData.map(comment => ({
         ...comment,
         user: comment.user ? {
@@ -139,7 +136,7 @@ const CommentSection = ({ task, currentUser }) => {
     const commentTime = new Date(createdAt);
     const now = new Date();
     const hoursDiff = (now - commentTime) / (1000 * 60 * 60);
-    return hoursDiff < 1; // Can edit within 1 hour
+    return hoursDiff < 1; 
   };
 
   const handleImageSelect = (e) => {

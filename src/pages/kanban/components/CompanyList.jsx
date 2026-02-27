@@ -42,7 +42,6 @@ const CompanyList = ({
     location: ''
   });
 
-  // Load staff assignments for all branches
   useEffect(() => {
     if (branches.length > 0) {
       loadBranchStaff();
@@ -51,7 +50,6 @@ const CompanyList = ({
 
   const loadBranchStaff = async () => {
     try {
-      // First get all staff_branches relationships
       const { data: staffBranchData, error: sbError } = await supabase
         .from('staff_branches')
         .select('branch_id, staff_id');
@@ -282,7 +280,6 @@ const CompanyList = ({
         )}
       </div>
 
-      {/* Stats */}
       <div className="px-4 md:px-6 py-3 md:py-4 bg-gray-50 border-b border-gray-100">
         <div className="grid grid-cols-3 gap-2 md:gap-4">
           <div className="text-center">
@@ -312,7 +309,6 @@ const CompanyList = ({
         </div>
       </div>
 
-      {/* Footer */}
       <div className="p-3 md:p-4 flex items-center justify-between">
         <div className="text-xs text-gray-500 flex items-center gap-1">
           <Calendar className="w-3 md:w-3.5 h-3 md:h-3.5" />
@@ -350,7 +346,6 @@ const CompanyList = ({
 
   return (
     <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
-      {/* Sticky Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 md:px-8 py-4 md:py-6">
         <div className="flex items-center justify-between">
           <div>
@@ -372,10 +367,8 @@ const CompanyList = ({
         </div>
       </div>
 
-      {/* Sticky Filters and Search */}
       <div className="sticky top-[80px] md:top-[100px] z-10 bg-white border-b border-gray-200 px-4 md:px-8 py-4">
         <div className="flex flex-col gap-3">
-          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 md:w-5 h-4 md:h-5 text-gray-400" />
             <input

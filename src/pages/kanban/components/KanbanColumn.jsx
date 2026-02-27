@@ -7,8 +7,7 @@ const KanbanColumn = ({
   onAddTask, 
   onEditTask,
   onMoveTask,
-  onStatusChange, // NEW: Handler for status changes with timestamps
-  canDelete,
+  onStatusChange, 
   canAddTask = false,
   currentUser
 }) => {

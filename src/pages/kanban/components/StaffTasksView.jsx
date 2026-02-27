@@ -18,8 +18,8 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
   const [taskDueDate, setTaskDueDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [staffBranches, setStaffBranches] = useState([]); // Changed to array for multiple branches
-  const [branchMap, setBranchMap] = useState({}); // Map of branch_id to branch data
+  const [staffBranches, setStaffBranches] = useState([]);
+  const [branchMap, setBranchMap] = useState({});
 
   useEffect(() => {
     if (staff?.id) {
@@ -27,6 +27,43 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
       loadCurrentUser();
       loadBranches();
       loadStaffBranches();
+
+      // Set up real-time subscription for task assignments
+      const assignmentsChannel = supabase
+        .channel(`task_assignments:${staff.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'task_assigned_users',
+            filter: `user_id=eq.${staff.id}`
+          },
+          () => {
+            console.log('Task assignment changed, reloading...');
+            loadStaffTasks();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'tasks'
+          },
+          (payload) => {
+            // Reload if a task assigned to this staff is updated
+            if (payload.new?.assigned_to === staff.id || payload.old?.assigned_to === staff.id) {
+              console.log('Task updated, reloading...');
+              loadStaffTasks();
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(assignmentsChannel);
+      };
     }
   }, [staff?.id]);
 
@@ -39,7 +76,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     }
   }, [selectedBranch]);
 
-  // Auto-select staff's first branch if they have one
   useEffect(() => {
     if (staffBranches.length > 0 && isAddTaskModalOpen && !selectedBranch) {
       setSelectedBranch(staffBranches[0]);
@@ -87,7 +123,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
       
       setBranches(data || []);
       
-      // Create branch map for quick lookups
       const map = {};
       data?.forEach(branch => {
         map[branch.id] = branch;
@@ -112,7 +147,7 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         setSelectedBoard(data[0].id);
       }
     } catch (err) {
-      console.error('Error loading boards:', err);
+      console.error('Error loading work order:', err);
     }
   };
 
@@ -121,15 +156,46 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      const { data: directTasks, error: directError } = await supabase
         .from('tasks')
         .select('*')
         .eq('assigned_to', staff.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (directError) throw directError;
 
-      setTasks(data || []);
+      // Get tasks from the task_assigned_users junction table
+      const { data: assignedTaskIds, error: assignError } = await supabase
+        .from('task_assigned_users')
+        .select('task_id')
+        .eq('user_id', staff.id);
+
+      if (assignError && assignError.code !== 'PGRST116') {
+        console.error('Error loading assigned tasks:', assignError);
+      }
+
+      // Fetch the actual task data for assigned tasks
+      let assignedTasks = [];
+      if (assignedTaskIds && assignedTaskIds.length > 0) {
+        const taskIds = assignedTaskIds.map(a => a.task_id);
+        const { data: tasksData, error: tasksError } = await supabase
+          .from('tasks')
+          .select('*')
+          .in('id', taskIds)
+          .order('created_at', { ascending: false });
+
+        if (tasksError) throw tasksError;
+        assignedTasks = tasksData || [];
+      }
+
+      // Combine and deduplicate tasks
+      const allTasks = [...(directTasks || []), ...assignedTasks];
+      const uniqueTasks = allTasks.filter((task, index, self) =>
+        index === self.findIndex(t => t.id === task.id)
+      );
+
+      setTasks(uniqueTasks);
     } catch (err) {
       console.error('Error loading staff tasks:', err);
     } finally {
@@ -144,14 +210,14 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     }
 
     if (!selectedBranch || !selectedBoard) {
-      alert('Please select a branch and board');
+      alert('Please select a branch and work order');
       return;
     }
 
     try {
       setSaving(true);
 
-      const { error } = await supabase
+      const { data: newTask, error: taskError } = await supabase
         .from('tasks')
         .insert([
           {
@@ -166,25 +232,41 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
             created_by: currentUser?.id,
             updated_by: currentUser?.id
           }
-        ]);
+        ])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (taskError) throw taskError;
+
+      try {
+        await supabase
+          .from('task_assigned_users')
+          .insert([
+            {
+              task_id: newTask.id,
+              user_id: staff.id,
+              assigned_by: currentUser?.id
+            }
+          ]);
+      } catch (assignError) {
+        // Ignore duplicate key errors (23505)
+        if (assignError.code !== '23505') {
+          console.error('Error assigning user:', assignError);
+        }
+      }
 
       // Reset form
       setTaskTitle('');
       setTaskDescription('');
       setTaskPriority('medium');
       setTaskDueDate('');
-      // Only reset branch if staff doesn't have assigned branches
       if (staffBranches.length === 0) {
         setSelectedBranch('');
       }
       setSelectedBoard('');
       setIsAddTaskModalOpen(false);
 
-      // Reload tasks
       await loadStaffTasks();
-
       alert('Task created successfully!');
     } catch (err) {
       console.error('Error creating task:', err);
@@ -252,8 +334,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
 
   const stats = getStatusStats();
   const filteredTasks = getFilteredTasks();
-
-  // Check if staff has branches assigned
   const staffHasBranches = staffBranches.length > 0;
 
   const FilterButton = ({ value, label, count, icon: Icon }) => (
@@ -279,11 +359,7 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
     const branchName = branchMap[task.branch_id]?.name || 'Unknown Branch';
     
     return (
-      <div
-        onClick={() => onTaskClick(task)}
-        className="task-card"
-      >
-        {/* Branch Name Badge at Top */}
+      <div onClick={() => onTaskClick(task)} className="task-card">
         <div className="flex items-center gap-1.5 mb-2">
           <Building2 className="w-3.5 h-3.5 text-blue-600" />
           <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
@@ -351,7 +427,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Filter Button Styles */
         .filter-btn {
           display: flex;
           align-items: center;
@@ -399,7 +474,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Filter Label - Hide on mobile, show on tablet+ */
         .filter-label-full {
           display: none;
         }
@@ -410,7 +484,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Header Styles */
         .staff-header {
           background: white;
           border-bottom: 1px solid #e5e7eb;
@@ -508,7 +581,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Add Task Button */
         .add-task-btn {
           padding: 0.5rem 0.75rem;
           background: #2563eb;
@@ -549,7 +621,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Task Card Styles */
         .task-card {
           background: white;
           padding: 0.75rem;
@@ -607,7 +678,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Tasks Grid */
         .tasks-grid {
           flex: 1;
           overflow-y: auto;
@@ -646,7 +716,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
 
-        /* Loading Spinner */
         .loading-spinner {
           width: 2rem;
           height: 2rem;
@@ -661,7 +730,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Empty State */
         .empty-icon {
           width: 3rem;
           height: 3rem;
@@ -700,7 +768,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Date Display Responsive */
         .date-full {
           display: none;
         }
@@ -735,7 +802,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Scrollbar Hide */
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
@@ -745,7 +811,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           scrollbar-width: none;
         }
 
-        /* Filter Container */
         .filters-container {
           display: flex;
           align-items: center;
@@ -768,7 +833,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
           }
         }
 
-        /* Modal Styles */
         .modal-overlay {
           position: fixed;
           inset: 0;
@@ -885,14 +949,10 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         }
       `}</style>
 
-      {/* Header */}
       <div className="staff-header">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 md:gap-3">
-            <button
-              onClick={onBack}
-              className="back-btn hover:bg-gray-100 rounded-lg transition-colors"
-            >
+            <button onClick={onBack} className="back-btn hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowLeft className="back-btn-icon text-gray-600" />
             </button>
             <div className="flex items-center gap-2 md:gap-3">
@@ -906,17 +966,13 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
             </div>
           </div>
           
-          <button
-            onClick={() => setIsAddTaskModalOpen(true)}
-            className="add-task-btn"
-          >
+          <button onClick={() => setIsAddTaskModalOpen(true)} className="add-task-btn">
             <Plus className="add-task-btn-icon" />
             <span className="hidden sm:inline">Add Task</span>
             <span className="sm:hidden">Add</span>
           </button>
         </div>
 
-        {/* Filters */}
         <div className="filters-container scrollbar-hide">
           <FilterButton value="all" label="All Tasks" count={stats.all} />
           <FilterButton value="todo" label="To Do" count={stats.todo} icon={AlertCircle} />
@@ -926,7 +982,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         </div>
       </div>
 
-      {/* Tasks Grid */}
       <div className="tasks-grid">
         {filteredTasks.length === 0 ? (
           <div className="flex items-center justify-center h-48 md:h-64">
@@ -950,94 +1005,53 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         )}
       </div>
 
-      {/* Add Task Modal */}
       {isAddTaskModalOpen && (
         <div className="modal-overlay" onClick={() => setIsAddTaskModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Add Task for {staff?.full_name}</h3>
-              <button
-                onClick={() => setIsAddTaskModalOpen(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <button onClick={() => setIsAddTaskModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
             <div className="modal-body">
-              {/* Show branch selector - filter to only staff's assigned branches if they have any */}
               <div className="form-group">
                 <label className="form-label">Branch *</label>
-                <select
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="form-select"
-                  required
-                >
+                <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="form-select" required>
                   <option value="">Select Branch</option>
-                  {branches
-                    .filter(branch => !staffHasBranches || staffBranches.includes(branch.id))
-                    .map(branch => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
+                  {branches.filter(branch => !staffHasBranches || staffBranches.includes(branch.id)).map(branch => (
+                    <option key={branch.id} value={branch.id}>{branch.name}</option>
+                  ))}
                 </select>
                 {staffHasBranches && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Showing only branches assigned to this staff member
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Showing only branches assigned to this staff member</p>
                 )}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Board *</label>
-                <select
-                  value={selectedBoard}
-                  onChange={(e) => setSelectedBoard(e.target.value)}
-                  className="form-select"
-                  required
-                  disabled={!selectedBranch || boards.length === 0}
-                >
-                  <option value="">Select Board</option>
+                <label className="form-label">Work Order *</label>
+                <select value={selectedBoard} onChange={(e) => setSelectedBoard(e.target.value)} className="form-select" required disabled={!selectedBranch || boards.length === 0}>
+                  <option value="">Work Order</option>
                   {boards.map(board => (
-                    <option key={board.id} value={board.id}>
-                      {board.name}
-                    </option>
+                    <option key={board.id} value={board.id}>{board.name}</option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Title *</label>
-                <input
-                  type="text"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  className="form-input"
-                  placeholder="Enter task title"
-                  required
-                />
+                <input type="text" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} className="form-input" placeholder="Enter task title" required />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Description</label>
-                <textarea
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  className="form-textarea"
-                  placeholder="Enter task description"
-                  rows="3"
-                />
+                <textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} className="form-textarea" placeholder="Enter task description" rows="3" />
               </div>
 
               <div className="form-group">
                 <label className="form-label">Priority</label>
-                <select
-                  value={taskPriority}
-                  onChange={(e) => setTaskPriority(e.target.value)}
-                  className="form-select"
-                >
+                <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)} className="form-select">
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
@@ -1046,28 +1060,15 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
 
               <div className="form-group">
                 <label className="form-label">Due Date</label>
-                <input
-                  type="date"
-                  value={taskDueDate}
-                  onChange={(e) => setTaskDueDate(e.target.value)}
-                  className="form-input"
-                />
+                <input type="date" value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="form-input" />
               </div>
             </div>
 
             <div className="modal-footer">
-              <button
-                onClick={() => setIsAddTaskModalOpen(false)}
-                className="btn btn-cancel"
-                disabled={saving}
-              >
+              <button onClick={() => setIsAddTaskModalOpen(false)} className="btn btn-cancel" disabled={saving}>
                 Cancel
               </button>
-              <button
-                onClick={handleAddTask}
-                className="btn btn-primary"
-                disabled={saving || !taskTitle.trim() || !selectedBranch || !selectedBoard}
-              >
+              <button onClick={handleAddTask} className="btn btn-primary" disabled={saving || !taskTitle.trim() || !selectedBranch || !selectedBoard}>
                 {saving ? 'Creating...' : 'Create Task'}
               </button>
             </div>

@@ -189,9 +189,7 @@ const LeftSidebar = ({
           </div>
         </div>
 
-        {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {/* Dashboard */}
           <NavItem
             icon={LayoutDashboard}
             label="Dashboard"
@@ -199,7 +197,6 @@ const LeftSidebar = ({
             onClick={() => onViewChange('dashboard')}
           />
 
-          {/* Admin Only: Companies/Branches List */}
           {isAdmin && (
             <NavItem
               icon={Building2}
@@ -209,7 +206,6 @@ const LeftSidebar = ({
             />
           )}
 
-          {/* Admin Only: Staff Management */}
           {isAdmin && onStaffListClick && (
             <NavItem
               icon={Users}
@@ -219,7 +215,6 @@ const LeftSidebar = ({
             />
           )}
 
-          {/* Admin Only: To Review - NEW */}
           {isAdmin && (
             <NavItem
               icon={ClipboardCheck}
@@ -230,7 +225,6 @@ const LeftSidebar = ({
             />
           )}
 
-          {/* History - Both Admin and Staff - NEW */}
           <NavItem
             icon={History}
             label="History"
@@ -238,7 +232,6 @@ const LeftSidebar = ({
             onClick={() => onViewChange('history')}
           />
 
-          {/* My Boards Section - Staff Only */}
           {isStaff && branches.length > 0 && (
             <div className="pt-4">
               <button
@@ -247,7 +240,7 @@ const LeftSidebar = ({
               >
                 <div className="flex items-center gap-2">
                   <Kanban className="w-4 h-4" />
-                  <span>My Boards</span>
+                  <span>Work Order</span>
                 </div>
                 {expandedBranches ? (
                   <ChevronDown className="w-4 h-4" />
@@ -280,7 +273,6 @@ const LeftSidebar = ({
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 text-center">
             {isAdmin ? 'Administrator' : isStaff ? 'Staff Member' : 'User'}

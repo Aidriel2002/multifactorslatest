@@ -12,6 +12,81 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
 
   useEffect(() => {
     loadStaffData();
+
+    // Set up real-time subscriptions
+    const staffBranchesChannel = supabase
+      .channel('staff_branches_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_branches'
+        },
+        () => {
+          console.log('Staff-branch assignment changed, reloading...');
+          loadStaffData();
+        }
+      )
+      .subscribe();
+
+    const staffChannel = supabase
+      .channel('staff_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'users',
+          filter: 'role=eq.staff'
+        },
+        () => {
+          console.log('Staff data changed, reloading...');
+          loadStaffData();
+        }
+      )
+      .subscribe();
+
+    const branchesChannel = supabase
+      .channel('branches_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'branches'
+        },
+        () => {
+          console.log('Branch data changed, reloading...');
+          loadStaffData();
+        }
+      )
+      .subscribe();
+
+    // Add subscription for task_assignments to catch auto-assignments
+    const taskAssignmentsChannel = supabase
+      .channel('task_assignments_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'task_assignments'
+        },
+        () => {
+          console.log('Task assignment changed, reloading staff list...');
+          // Small delay to allow trigger to complete
+          setTimeout(() => loadStaffData(), 500);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(staffBranchesChannel);
+      supabase.removeChannel(staffChannel);
+      supabase.removeChannel(branchesChannel);
+      supabase.removeChannel(taskAssignmentsChannel);
+    };
   }, []);
 
   const loadStaffData = async () => {
@@ -41,7 +116,9 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
         .from('staff_branches')
         .select('staff_id, branch_id');
 
-      if (staffBranchesError) throw staffBranchesError;
+      if (staffBranchesError && staffBranchesError.code !== 'PGRST116') {
+        console.error('Error loading staff branches:', staffBranchesError);
+      }
 
       // Group staff by branch - ALLOW MULTIPLE BRANCHES PER STAFF
       const staffGrouped = {};
@@ -58,18 +135,24 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
       const assignedStaffIds = new Set();
 
       // Add staff to ALL their assigned branches
-      staffBranchesData?.forEach(assignment => {
-        if (!assignment.staff_id || !assignment.branch_id) return;
-        
-        assignedStaffIds.add(assignment.staff_id);
-        
-        // Find the staff member
-        const staff = staffData?.find(s => s.id === assignment.staff_id);
-        
-        if (staff && staffGrouped[assignment.branch_id]) {
-          staffGrouped[assignment.branch_id].push(staff);
-        }
-      });
+      if (staffBranchesData && staffBranchesData.length > 0) {
+        staffBranchesData.forEach(assignment => {
+          if (!assignment.staff_id || !assignment.branch_id) return;
+          
+          assignedStaffIds.add(assignment.staff_id);
+          
+          // Find the staff member
+          const staff = staffData?.find(s => s.id === assignment.staff_id);
+          
+          if (staff && staffGrouped[assignment.branch_id]) {
+            // Check if staff is already in this branch (avoid duplicates)
+            const existingStaff = staffGrouped[assignment.branch_id].find(s => s.id === staff.id);
+            if (!existingStaff) {
+              staffGrouped[assignment.branch_id].push(staff);
+            }
+          }
+        });
+      }
 
       // Add unassigned staff (those not in any branch)
       staffData?.forEach(staff => {
@@ -80,9 +163,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
 
       setBranches(branchesData || []);
       setStaffByBranch(staffGrouped);
-      
-      // Don't auto-expand anything - let user manually expand
-      setExpandedBranches(new Set());
 
       // Auto-select a random staff member ONLY once on first load
       const allStaff = staffData || [];
@@ -114,12 +194,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
   const handleStaffSelect = (staff) => {
     onStaffSelect(staff);
     setIsMobileOpen(false);
-  };
-
-  const getTotalStaffCount = () => {
-    return Object.values(staffByBranch).reduce((total, staff) => {
-      return total;
-    }, new Set(Object.values(staffByBranch).flat().map(s => s.id))).size;
   };
 
   if (loading) {
@@ -199,7 +273,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
             transform: scale(0.95);
           }
 
-          /* Add padding to content area to prevent overlap with button */
           .content-with-staff-btn {
             padding-bottom: 5rem !important;
           }
@@ -308,7 +381,7 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
                         <div className="ml-4 mt-1 space-y-1">
                           {branchStaff.map(staff => (
                             <button
-                              key={staff.id}
+                              key={`${branch.id}-${staff.id}`}
                               onClick={() => handleStaffSelect(staff)}
                               className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
                                 selectedStaffId === staff.id

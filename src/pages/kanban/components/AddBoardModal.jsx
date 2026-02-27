@@ -18,7 +18,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
     const trimmedName = boardName.trim();
     
     if (!trimmedName) {
-      setError('Board name is required');
+      setError('Work Order name is required');
       return;
     }
 
@@ -28,7 +28,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
     );
 
     if (isDuplicate) {
-      setError('A board with this name already exists');
+      setError('A Work Order with this name already exists');
       return;
     }
 
@@ -45,7 +45,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <Layers className="w-5 h-5 text-blue-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">Create New Board</h2>
+            <h2 className="text-xl font-bold text-gray-900">Create Work Order</h2>
           </div>
           <button
             onClick={onClose}
@@ -59,7 +59,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Board Name
+              Work Order Name
             </label>
             <input
               type="text"
@@ -68,7 +68,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
                 setBoardName(e.target.value);
                 setError('');
               }}
-              placeholder="Enter board name..."
+              placeholder="Enter work order name..."
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                 error ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
@@ -105,7 +105,7 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
               ) : (
                 <>
                   <Layers className="w-4 h-4" />
-                  Create Board
+                  Create Work Order
                 </>
               )}
             </button>
