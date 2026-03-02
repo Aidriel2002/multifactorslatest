@@ -354,11 +354,6 @@ export const quotationAPI = {
 
 export const projectAPI = {
   async getAll() {
-    const isAdminUser = await isAdmin();
-    if (!isAdminUser) {
-      throw new Error('Access denied. Admins only.');
-    }
-
     const { data, error } = await supabase
       .from('project')
       .select('*')
@@ -373,11 +368,6 @@ export const projectAPI = {
   },
 
   async getById(id) {
-    const isAdminUser = await isAdmin();
-    if (!isAdminUser) {
-      throw new Error('Access denied. Admins only.');
-    }
-
     const { data, error } = await supabase
       .from('project')
       .select('*')
