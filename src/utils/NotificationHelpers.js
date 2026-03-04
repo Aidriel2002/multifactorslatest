@@ -3,6 +3,17 @@ import { supabase } from '../lib/supabase';
 let notificationQueue = [];
 let batchTimeout = null;
 
+// ── Send push via Supabase Edge Function ───────────────────────────
+async function sendPush(userIds, title, message, url = '/') {
+  try {
+    await supabase.functions.invoke('send-push', {
+      body: { user_ids: userIds, title, message, url }
+    })
+  } catch (err) {
+    console.error('Push send error:', err)
+  }
+}
+
 async function processBatch() {
   if (notificationQueue.length === 0) return;
   
@@ -47,9 +58,7 @@ async function getAllAssignedUserIds(taskId, currentUserId) {
 export async function notifyTaskStatusChange(task, newStatus, currentUserId = null) {
   if (!task?.id) return;
 
-  // Always fetch from DB to get ALL assigned users, not just the in-memory snapshot
   const userIds = await getAllAssignedUserIds(task.id, currentUserId);
-
   if (userIds.length === 0) return;
 
   const statusLabels = {
@@ -60,63 +69,75 @@ export async function notifyTaskStatusChange(task, newStatus, currentUserId = nu
   };
 
   const notificationType = newStatus === 'completed' ? 'task_completed' : 'task_moved';
+  const title = 'Task Status Updated'
   const message = `Task "${task.title}" moved to ${statusLabels[newStatus] || newStatus}`;
 
   userIds.forEach(userId => {
     queueNotification({
       user_id: userId,
       type: notificationType,
-      title: 'Task Status Updated',
+      title,
       message,
       task_id: task.id,
       is_read: false,
       created_at: new Date().toISOString()
     });
   });
+
+  // ── Send push notification ──
+  await sendPush(userIds, title, message, '/kanban')
 }
 
 export async function notifyNewComment(task, commentText, commenterName, currentUserId = null) {
   if (!task?.id) return;
 
-  // Always fetch from DB to get ALL assigned users
   const userIds = await getAllAssignedUserIds(task.id, currentUserId);
-
   if (userIds.length === 0) return;
 
   const truncated = commentText.length > 50
     ? commentText.substring(0, 50) + '...'
     : commentText;
+
+  const title = 'New Comment'
   const message = `${commenterName} commented on "${task.title}": ${truncated}`;
 
   userIds.forEach(userId => {
     queueNotification({
       user_id: userId,
       type: 'new_comment',
-      title: 'New Comment',
+      title,
       message,
       task_id: task.id,
       is_read: false,
       created_at: new Date().toISOString()
     });
   });
+
+  // ── Send push notification ──
+  await sendPush(userIds, title, message, '/kanban')
 }
 
-// NEW: Call this when a task is assigned to notify newly added staff
 export async function notifyTaskAssigned(task, assignedUserIds, currentUserId = null) {
   if (!task?.id || !assignedUserIds?.length) return;
 
   const usersToNotify = assignedUserIds.filter(id => id !== currentUserId);
   if (usersToNotify.length === 0) return;
 
+  const title = 'Task Assigned'
+  const message = `You have been assigned to task "${task.title}"`
+
   usersToNotify.forEach(userId => {
     queueNotification({
       user_id: userId,
       type: 'task_assigned',
-      title: 'Task Assigned',
-      message: `You have been assigned to task "${task.title}"`,
+      title,
+      message,
       task_id: task.id,
       is_read: false,
       created_at: new Date().toISOString()
     });
   });
+
+  // ── Send push notification ──
+  await sendPush(usersToNotify, title, message, '/kanban')
 }

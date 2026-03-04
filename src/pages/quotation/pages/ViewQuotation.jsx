@@ -166,7 +166,7 @@ function ViewQuotation() {
               {quotation.address && <p className="text-black" style={{ fontSize: '12px'}}>{quotation.address}</p>}
 
               {!isQuotation2 && quotation.subject && (
-                <p className="text-black uppercase mt-3" style={{ fontSize: '12px'}}>Subject: {quotation.subject}</p>
+                <p className="text-black mt-3" style={{ fontSize: '12px'}}>Subject: {quotation.subject}</p>
               )}
             </div>
 
