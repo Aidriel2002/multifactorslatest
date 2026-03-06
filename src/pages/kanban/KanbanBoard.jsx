@@ -957,6 +957,7 @@ const KanbanBoard = () => {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
+      
     );
   }
 
@@ -981,6 +982,7 @@ const KanbanBoard = () => {
         onSelectBranch={handleSelectBranch}
         onStaffListClick={isAdmin ? handleStaffListToggle : null}
       />
+      
 
       {isAdmin && showStaffList && (
         <StaffList onStaffSelect={handleStaffSelect} selectedStaffId={selectedStaff?.id} />
@@ -1065,6 +1067,7 @@ const KanbanBoard = () => {
                   )}
                 </div>
               </div>
+              
 
               {boards.length > 0 && (
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b px-3 sm:px-6 py-2.5">
@@ -1149,6 +1152,7 @@ const KanbanBoard = () => {
           )}
         </div>
       </div>
+      
 
       <BoardPickerModal
         isOpen={isBoardPickerOpen}

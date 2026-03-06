@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ClipboardCheck, Calendar, User, Users, CheckCircle, Building2, Layers, Search, Filter, RefreshCw } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { notifyTaskConfirmed } from '../../../utils/NotificationHelpers';
 
 const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
   const [tasks, setTasks] = useState([]);
@@ -136,6 +137,7 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
       });
       if (error) throw error;
       setTasks(prev => prev.filter(t => t.id !== taskId));
+      await notifyTaskConfirmed({ id: taskId }, currentUser.id);
       if (onTaskConfirm) onTaskConfirm(taskId);
       if (onRefresh)     onRefresh();
     } catch (err) {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, MoreVertical, Trash2, Calendar, User, Play, ArrowRight, CheckCircle, Building2 } from 'lucide-react';
+import { Plus, MoreVertical, Calendar, User, Play, ArrowRight, CheckCircle } from 'lucide-react';
+import { notifyTaskStatusChange } from '../../../utils/notificationHelpers';
 
 const KanbanColumn = ({ 
   column, 
@@ -7,7 +8,6 @@ const KanbanColumn = ({
   onAddTask, 
   onEditTask,
   onMoveTask,
-  onStatusChange, 
   canAddTask = false,
   currentUser
 }) => {
@@ -63,7 +63,6 @@ const KanbanColumn = ({
     }
   };
 
-  // NEW: Handle status progression with timestamps
   const handleStatusProgress = async (task) => {
     if (processingTaskId === task.id) return;
 
@@ -72,7 +71,6 @@ const KanbanColumn = ({
     try {
       let newStatus = task.status;
       
-      // Determine next status
       switch (task.status) {
         case 'todo':
           newStatus = 'in-progress';
@@ -87,9 +85,11 @@ const KanbanColumn = ({
           newStatus = task.status;
       }
 
-      if (onStatusChange) {
-        await onStatusChange(task.id, newStatus);
+      if (onMoveTask) {
+        await onMoveTask(task.id, newStatus);
       }
+
+      notifyTaskStatusChange(task, newStatus, currentUser?.id);
     } catch (error) {
       console.error('Error progressing task status:', error);
       alert('Failed to update task status. Please try again.');
@@ -98,7 +98,6 @@ const KanbanColumn = ({
     }
   };
 
-  // NEW: Get button label based on current status
   const getProgressButtonLabel = (status) => {
     switch (status) {
       case 'todo':
@@ -112,7 +111,6 @@ const KanbanColumn = ({
     }
   };
 
-  // NEW: Get button icon based on current status
   const getProgressButtonIcon = (status) => {
     switch (status) {
       case 'todo':
@@ -128,7 +126,10 @@ const KanbanColumn = ({
 
   const TaskCard = ({ task }) => {
     const isAdmin = currentUser?.role === 'admin';
-    const isAssignedToMe = task.assigned_to === currentUser?.id;
+    
+    const assignedUsers = task.assigned_users || [];
+    const isAssignedToMe = assignedUsers.some(user => user.id === currentUser?.id) || task.assigned_to === currentUser?.id;
+    
     const canEdit = isAdmin;
     const canProgress = isAssignedToMe && task.status !== 'completed';
     
@@ -142,7 +143,6 @@ const KanbanColumn = ({
         onDragStart={(e) => handleDragStart(e, task)}
         className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-move group"
       >
-        {/* Header with Title and Edit */}
         <div className="flex items-start justify-between mb-2">
           <h4 className="font-semibold text-gray-900 flex-1 pr-2">{task.title}</h4>
           {canEdit && (
@@ -155,20 +155,10 @@ const KanbanColumn = ({
           )}
         </div>
 
-        {/* Branch Name - NEW */}
-        {task.branch_name && (
-          <div className="flex items-center gap-1 mb-2 text-xs text-gray-600">
-            <Building2 className="w-3 h-3" />
-            <span className="truncate">{task.branch_name}</span>
-          </div>
-        )}
-
-        {/* Description */}
         {task.description && (
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
         )}
 
-        {/* Metadata */}
         <div className="flex items-center justify-between text-xs mb-3">
           <div className="flex items-center gap-2">
             {task.priority && (
@@ -183,19 +173,40 @@ const KanbanColumn = ({
               </span>
             )}
           </div>
-          {task.assigned_user && (
-            <span className="flex items-center gap-1 text-gray-500">
-              <User className="w-3 h-3" />
-              <span className="truncate max-w-[100px]">
-                {typeof task.assigned_user === 'object' 
-                  ? task.assigned_user.name || task.assigned_user.full_name
-                  : task.assigned_user}
-              </span>
-            </span>
-          )}
         </div>
 
-        {/* Progress Button - NEW */}
+        {assignedUsers.length > 0 && (
+          <div className="mb-3">
+            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+              <User className="w-3 h-3" />
+              <span className="font-medium">
+                Assigned to {assignedUsers.length} {assignedUsers.length === 1 ? 'person' : 'people'}:
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {assignedUsers.slice(0, 3).map((user, index) => (
+                <span
+                  key={user.id || index}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
+                  title={user.full_name || user.name || 'Unknown'}
+                >
+                  <div className="w-4 h-4 bg-blue-200 rounded-full flex items-center justify-center text-blue-800 font-bold text-[10px]">
+                    {(user.full_name || user.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="max-w-[80px] truncate">
+                    {user.full_name || user.name || 'Unknown'}
+                  </span>
+                </span>
+              ))}
+              {assignedUsers.length > 3 && (
+                <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                  +{assignedUsers.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {canProgress && buttonLabel && ButtonIcon && (
           <button
             onClick={() => handleStatusProgress(task)}
@@ -246,7 +257,6 @@ const KanbanColumn = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Column Header */}
       <div className={`p-4 rounded-t-lg border-2 ${getColumnColor()}`}>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-bold text-gray-900">{column.title}</h3>
@@ -255,7 +265,6 @@ const KanbanColumn = ({
           </span>
         </div>
         
-        {/* Add Task Button */}
         {canAddTask && column.id === 'todo' && (
           <button
             onClick={() => onAddTask(column.id)}
@@ -267,7 +276,6 @@ const KanbanColumn = ({
         )}
       </div>
 
-      {/* Tasks Container */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}

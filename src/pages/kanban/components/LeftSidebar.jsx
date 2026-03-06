@@ -10,6 +10,8 @@ import {
   History,
   ClipboardCheck
 } from 'lucide-react';
+import PushNotificationToggle from '../../../components/PushNotificationToggle';
+
 
 const LeftSidebar = ({ 
   activeView, 
@@ -58,6 +60,7 @@ const LeftSidebar = ({
         </span>
       )}
     </button>
+    
   );
 
   return (
@@ -272,6 +275,7 @@ const LeftSidebar = ({
             </div>
           )}
         </div>
+        <PushNotificationToggle />
 
         <div className="p-4 border-t border-gray-200">
           <div className="text-xs text-gray-500 text-center">

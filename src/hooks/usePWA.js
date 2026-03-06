@@ -9,7 +9,6 @@ export function usePWA() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   useEffect(() => {
-    // Check if already installed (standalone mode)
     if (
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true
@@ -17,21 +16,18 @@ export function usePWA() {
       setIsInstalled(true);
     }
 
-    // Capture install prompt
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
 
-    // Detect installed
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
     };
 
-    // Online/Offline
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
@@ -40,15 +36,12 @@ export function usePWA() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
           setSwRegistered(true);
-          console.log('[PWA] Service Worker registered:', registration.scope);
 
-          // Check for updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             newWorker?.addEventListener('statechange', () => {
@@ -65,7 +58,6 @@ export function usePWA() {
           console.error('[PWA] Service Worker registration failed:', err);
         });
 
-      // Listen for controller change (update applied)
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         window.location.reload();
       });

@@ -17,6 +17,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import CommentSection from './CommentSection';
 
+
 const Dashboard = ({ 
   branches = [], 
   tasks = [], 
@@ -343,6 +344,7 @@ const Dashboard = ({
       </div>
     );
   };
+  
 
   const StaffTasksModal = ({ staff, onClose }) => {
     if (!staff) return null;
