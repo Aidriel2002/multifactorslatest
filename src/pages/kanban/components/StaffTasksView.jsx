@@ -28,7 +28,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
       loadBranches();
       loadStaffBranches();
 
-      // Set up real-time subscription for task assignments
       const assignmentsChannel = supabase
         .channel(`task_assignments:${staff.id}`)
         .on(
@@ -40,7 +39,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
             filter: `user_id=eq.${staff.id}`
           },
           () => {
-            console.log('Task assignment changed, reloading...');
             loadStaffTasks();
           }
         )
@@ -52,9 +50,7 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
             table: 'tasks'
           },
           (payload) => {
-            // Reload if a task assigned to this staff is updated
             if (payload.new?.assigned_to === staff.id || payload.old?.assigned_to === staff.id) {
-              console.log('Task updated, reloading...');
               loadStaffTasks();
             }
           }
@@ -165,7 +161,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
 
       if (directError) throw directError;
 
-      // Get tasks from the task_assigned_users junction table
       const { data: assignedTaskIds, error: assignError } = await supabase
         .from('task_assigned_users')
         .select('task_id')
@@ -175,7 +170,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         console.error('Error loading assigned tasks:', assignError);
       }
 
-      // Fetch the actual task data for assigned tasks
       let assignedTasks = [];
       if (assignedTaskIds && assignedTaskIds.length > 0) {
         const taskIds = assignedTaskIds.map(a => a.task_id);
@@ -189,7 +183,6 @@ const StaffTasksView = ({ staff, onTaskClick, onBack }) => {
         assignedTasks = tasksData || [];
       }
 
-      // Combine and deduplicate tasks
       const allTasks = [...(directTasks || []), ...assignedTasks];
       const uniqueTasks = allTasks.filter((task, index, self) =>
         index === self.findIndex(t => t.id === task.id)

@@ -1,58 +1,186 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../../../lib/supabase';
 import { 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle,
-  Calendar,
-  TrendingUp,
-  ListChecks,
-  Target
+  CheckCircle2, Clock, AlertCircle, Calendar, TrendingUp, ListChecks, Target
 } from 'lucide-react';
 
-const StaffDashboard = ({ 
-  tasks = [], 
-  currentUser,
-  onTaskClick
-}) => {
-  const myTasks = tasks.filter(t => {
-    if (t.assigned_users && Array.isArray(t.assigned_users)) {
-      return t.assigned_users.some(user => user.id === currentUser?.id);
+const StaffDashboard = ({ tasks = [], currentUser, onTaskClick }) => {
+  const [localTasks, setLocalTasks] = useState(tasks);
+  const isMounted = useRef(true);
+  const fetchInProgress = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    setLocalTasks(tasks);
+  }, [tasks]);
+
+  const fetchMyTasks = useCallback(async () => {
+    if (!currentUser?.id) return;
+    if (fetchInProgress.current) return; 
+    fetchInProgress.current = true;
+
+    try {
+      const { data: junctionRows } = await supabase
+        .from('task_assignments')
+        .select('task_id')
+        .eq('user_id', currentUser.id);
+
+      const junctionTaskIds = (junctionRows || []).map(r => r.task_id);
+
+      const [legacyResult, junctionResult] = await Promise.all([
+        supabase.from('tasks').select('*').eq('assigned_to', currentUser.id),
+        junctionTaskIds.length > 0
+          ? supabase.from('tasks').select('*').in('id', junctionTaskIds)
+          : Promise.resolve({ data: [] })
+      ]);
+
+      const allRaw = [...(legacyResult.data || []), ...(junctionResult.data || [])];
+      const seen = new Set();
+      const deduped = allRaw.filter(t => {
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      });
+
+      if (!isMounted.current) return;
+
+      setLocalTasks(deduped.map(t => ({
+        ...t,
+        assigned_users: t.assigned_users || [],
+        comments: t.comments || []
+      })));
+
+      if (deduped.length === 0) return;
+
+      const taskIds = deduped.map(t => t.id);
+
+      const [assignmentsResult, commentsResult] = await Promise.all([
+        supabase.from('task_assignments')
+          .select('task_id, user_id, assigned_at, assigned_by')
+          .in('task_id', taskIds),
+        supabase.from('task_comments')
+          .select('id, task_id, comment, created_at, user_id, read_by')
+          .in('task_id', taskIds)
+          .order('created_at', { ascending: true })
+      ]);
+
+      if (!isMounted.current) return;
+
+      const assignmentUserIds = [...new Set((assignmentsResult.data || []).map(a => a.user_id))];
+      const commentUserIds    = [...new Set((commentsResult.data    || []).map(c => c.user_id))];
+      const allUserIds        = [...new Set([...assignmentUserIds, ...commentUserIds])];
+
+      let userMap = {};
+      if (allUserIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users').select('id, full_name, email, role').in('id', allUserIds);
+        (usersData || []).forEach(u => { userMap[u.id] = u; });
+      }
+
+      if (!isMounted.current) return;
+
+      const assignmentsByTask = {};
+      (assignmentsResult.data || []).forEach(a => {
+        if (!assignmentsByTask[a.task_id]) assignmentsByTask[a.task_id] = [];
+        const u = userMap[a.user_id];
+        if (u) assignmentsByTask[a.task_id].push({
+          id: u.id, full_name: u.full_name, email: u.email, role: u.role,
+          assigned_at: a.assigned_at, assigned_by: a.assigned_by
+        });
+      });
+
+      const commentsByTask = {};
+      (commentsResult.data || []).forEach(c => {
+        if (!commentsByTask[c.task_id]) commentsByTask[c.task_id] = [];
+        commentsByTask[c.task_id].push({
+          id: c.id, task_id: c.task_id, content: c.comment,
+          created_at: c.created_at, created_by: c.user_id, read_by: c.read_by || [],
+          user: { id: c.user_id, name: userMap[c.user_id]?.full_name || 'Unknown' }
+        });
+      });
+
+      const enriched = deduped.map(task => {
+        const assignedUsers = assignmentsByTask[task.id] || [];
+        return {
+          ...task,
+          assigned_users: assignedUsers,
+          assigned_user: assignedUsers[0]
+            ? { id: assignedUsers[0].id, name: assignedUsers[0].full_name }
+            : null,
+          assigned_to: assignedUsers[0]?.id || task.assigned_to,
+          comments: commentsByTask[task.id] || []
+        };
+      });
+
+      if (!isMounted.current) return;
+      setLocalTasks(enriched);
+
+    } catch (err) {
+      console.error('[StaffDashboard] fetchMyTasks error:', err);
+    } finally {
+      fetchInProgress.current = false;
     }
-    return t.assigned_to === currentUser?.id;
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    fetchMyTasks();
+  }, [fetchMyTasks]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const channel = supabase
+      .channel(`staff-rt-${currentUser.id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks' },
+        () => { fetchMyTasks(); }
+      )
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'task_assignments',
+          filter: `user_id=eq.${currentUser.id}` }, 
+        () => { fetchMyTasks(); }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') fetchMyTasks();
+      });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUser?.id, fetchMyTasks]);
+
+  const myTasks = localTasks.filter(t => {
+    const inJunction = Array.isArray(t.assigned_users) &&
+      t.assigned_users.some(u => u.id === currentUser?.id);
+    const inLegacy = t.assigned_to === currentUser?.id;
+    return inJunction || inLegacy;
   });
 
-  const totalTasks = myTasks.length;
-  const completedTasks = myTasks.filter(t => t.status === 'completed').length;
+  const totalTasks      = myTasks.length;
+  const completedTasks  = myTasks.filter(t => t.status === 'completed').length;
   const inProgressTasks = myTasks.filter(t => t.status === 'in-progress').length;
-  const todoTasks = myTasks.filter(t => t.status === 'todo').length;
+  const todoTasks       = myTasks.filter(t => t.status === 'todo').length;
   const validatingTasks = myTasks.filter(t => t.status === 'validating').length;
-  
-  const completionRate = totalTasks > 0 
-    ? Math.round((completedTasks / totalTasks) * 100) 
-    : 0;
+  const completionRate  = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Group tasks by status
   const tasksByStatus = {
-    todo: myTasks.filter(t => t.status === 'todo'),
+    todo:          myTasks.filter(t => t.status === 'todo'),
     'in-progress': myTasks.filter(t => t.status === 'in-progress'),
-    validating: myTasks.filter(t => t.status === 'validating'),
-    completed: myTasks.filter(t => t.status === 'completed')
+    validating:    myTasks.filter(t => t.status === 'validating'),
+    completed:     myTasks.filter(t => t.status === 'completed')
   };
 
-  // Get overdue tasks
-  const overdueTasks = myTasks.filter(t => 
-    t.due_date && 
-    new Date(t.due_date) < new Date() && 
-    t.status !== 'completed'
+  const overdueTasks = myTasks.filter(t =>
+    t.due_date && new Date(t.due_date) < new Date() && t.status !== 'completed'
   );
 
-  // Get upcoming tasks (due in next 7 days)
   const upcomingTasks = myTasks.filter(t => {
     if (!t.due_date || t.status === 'completed') return false;
-    const dueDate = new Date(t.due_date);
-    const today = new Date();
-    const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return dueDate > today && dueDate <= weekFromNow;
+    const due = new Date(t.due_date);
+    const now = new Date();
+    return due > now && due <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   });
 
   const StatCard = ({ icon: Icon, label, value, color, subtitle }) => (
@@ -67,43 +195,22 @@ const StaffDashboard = ({
   );
 
   const TaskCard = ({ task }) => {
-    const getPriorityColor = (priority) => {
-      switch (priority) {
-        case 'high':
-          return 'text-red-600 bg-red-50 border-red-200';
-        case 'medium':
-          return 'text-amber-600 bg-amber-50 border-amber-200';
-        case 'low':
-          return 'text-green-600 bg-green-50 border-green-200';
-        default:
-          return 'text-gray-600 bg-gray-50 border-gray-200';
-      }
+    const getPriorityColor = (p) => {
+      if (p === 'high')   return 'text-red-600 bg-red-50 border-red-200';
+      if (p === 'medium') return 'text-amber-600 bg-amber-50 border-amber-200';
+      if (p === 'low')    return 'text-green-600 bg-green-50 border-green-200';
+      return 'text-gray-600 bg-gray-50 border-gray-200';
     };
-
-    const getStatusColor = (status) => {
-      switch (status) {
-        case 'completed':
-          return 'text-green-700 bg-green-50';
-        case 'in-progress':
-          return 'text-blue-700 bg-blue-50';
-        case 'validating':
-          return 'text-purple-700 bg-purple-50';
-        case 'todo':
-          return 'text-gray-700 bg-gray-50';
-        default:
-          return 'text-gray-700 bg-gray-50';
-      }
+    const getStatusColor = (s) => {
+      if (s === 'completed')   return 'text-green-700 bg-green-50';
+      if (s === 'in-progress') return 'text-blue-700 bg-blue-50';
+      if (s === 'validating')  return 'text-purple-700 bg-purple-50';
+      return 'text-gray-700 bg-gray-50';
     };
-
-    const formatDate = (dateString) => {
-      if (!dateString) return null;
-      return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      });
-    };
-
     const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
+    const formatDate = (d) => d
+      ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : null;
 
     return (
       <div
@@ -115,18 +222,15 @@ const StaffDashboard = ({
             {task.title}
           </h3>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(task.status)}`}>
             {task.status.replace('-', ' ')}
           </span>
-          
           {task.priority && (
             <span className={`px-2 py-1 rounded text-xs font-medium border ${getPriorityColor(task.priority)}`}>
               {task.priority}
             </span>
           )}
-          
           {task.due_date && (
             <span className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
               <Calendar className="w-3 h-3" />
@@ -140,51 +244,23 @@ const StaffDashboard = ({
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            My Tasks
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Welcome back, {currentUser?.full_name}
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Tasks</h1>
+          <p className="text-sm text-gray-600 mt-1">Welcome back, {currentUser?.full_name}</p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* Stats Grid */}
         <section>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard
-              icon={ListChecks}
-              label="Total"
-              value={totalTasks}
-              color="text-gray-700"
-            />
-            <StatCard
-              icon={CheckCircle2}
-              label="Completed"
-              value={completedTasks}
-              color="text-green-600"
-              subtitle={`${completionRate}%`}
-            />
-            <StatCard
-              icon={Clock}
-              label="In Progress"
-              value={inProgressTasks}
-              color="text-blue-600"
-            />
-            <StatCard
-              icon={Target}
-              label="To Do"
-              value={todoTasks}
-              color="text-gray-600"
-            />
+            <StatCard icon={ListChecks}   label="Total"       value={totalTasks}      color="text-gray-700" />
+            <StatCard icon={CheckCircle2} label="Completed"   value={completedTasks}  color="text-green-600" subtitle={`${completionRate}%`} />
+            <StatCard icon={Clock}        label="In Progress" value={inProgressTasks} color="text-blue-600" />
+            <StatCard icon={Target}       label="To Do"       value={todoTasks}       color="text-gray-600" />
           </div>
         </section>
 
-        {/* Progress Bar */}
         <section className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -194,32 +270,17 @@ const StaffDashboard = ({
             <span className="text-2xl font-bold text-blue-600">{completionRate}%</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-3">
-            <div 
-              className="bg-blue-600 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${completionRate}%` }}
-            />
+            <div className="bg-blue-600 h-3 rounded-full transition-all duration-500"
+              style={{ width: `${completionRate}%` }} />
           </div>
           <div className="grid grid-cols-4 gap-2 sm:gap-4 mt-4 text-center text-xs sm:text-sm">
-            <div>
-              <p className="text-gray-600">To Do</p>
-              <p className="text-lg sm:text-xl font-bold text-gray-900">{todoTasks}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Active</p>
-              <p className="text-lg sm:text-xl font-bold text-blue-600">{inProgressTasks}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Review</p>
-              <p className="text-lg sm:text-xl font-bold text-purple-600">{validatingTasks}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Done</p>
-              <p className="text-lg sm:text-xl font-bold text-green-600">{completedTasks}</p>
-            </div>
+            <div><p className="text-gray-600">To Do</p>    <p className="text-lg sm:text-xl font-bold text-gray-900">{todoTasks}</p></div>
+            <div><p className="text-gray-600">Active</p>   <p className="text-lg sm:text-xl font-bold text-blue-600">{inProgressTasks}</p></div>
+            <div><p className="text-gray-600">Review</p>   <p className="text-lg sm:text-xl font-bold text-purple-600">{validatingTasks}</p></div>
+            <div><p className="text-gray-600">Done</p>     <p className="text-lg sm:text-xl font-bold text-green-600">{completedTasks}</p></div>
           </div>
         </section>
 
-        {/* Alerts */}
         {(overdueTasks.length > 0 || upcomingTasks.length > 0) && (
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {overdueTasks.length > 0 && (
@@ -229,18 +290,13 @@ const StaffDashboard = ({
                   <h3 className="font-semibold text-red-900">Overdue ({overdueTasks.length})</h3>
                 </div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {overdueTasks.slice(0, 3).map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))}
+                  {overdueTasks.slice(0, 3).map(task => <TaskCard key={task.id} task={task} />)}
                   {overdueTasks.length > 3 && (
-                    <p className="text-xs text-red-700 text-center py-2">
-                      +{overdueTasks.length - 3} more overdue tasks
-                    </p>
+                    <p className="text-xs text-red-700 text-center py-2">+{overdueTasks.length - 3} more</p>
                   )}
                 </div>
               </div>
             )}
-            
             {upcomingTasks.length > 0 && (
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-3">
@@ -248,13 +304,9 @@ const StaffDashboard = ({
                   <h3 className="font-semibold text-amber-900">Due Soon ({upcomingTasks.length})</h3>
                 </div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {upcomingTasks.slice(0, 3).map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))}
+                  {upcomingTasks.slice(0, 3).map(task => <TaskCard key={task.id} task={task} />)}
                   {upcomingTasks.length > 3 && (
-                    <p className="text-xs text-amber-700 text-center py-2">
-                      +{upcomingTasks.length - 3} more upcoming tasks
-                    </p>
+                    <p className="text-xs text-amber-700 text-center py-2">+{upcomingTasks.length - 3} more</p>
                   )}
                 </div>
               </div>
@@ -262,10 +314,8 @@ const StaffDashboard = ({
           </section>
         )}
 
-        {/* All Tasks by Status */}
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">All Tasks</h2>
-
           {totalTasks === 0 ? (
             <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
               <ListChecks className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -274,62 +324,47 @@ const StaffDashboard = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {/* To Do */}
               {tasksByStatus.todo.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full" />
                     To Do ({tasksByStatus.todo.length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {tasksByStatus.todo.map(task => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
+                    {tasksByStatus.todo.map(t => <TaskCard key={t.id} task={t} />)}
                   </div>
                 </div>
               )}
-
-              {/* In Progress */}
               {tasksByStatus['in-progress'].length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
                     In Progress ({tasksByStatus['in-progress'].length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {tasksByStatus['in-progress'].map(task => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
+                    {tasksByStatus['in-progress'].map(t => <TaskCard key={t.id} task={t} />)}
                   </div>
                 </div>
               )}
-
-              {/* Validating */}
               {tasksByStatus.validating.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-purple-500 rounded-full" />
                     Validating ({tasksByStatus.validating.length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {tasksByStatus.validating.map(task => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
+                    {tasksByStatus.validating.map(t => <TaskCard key={t.id} task={t} />)}
                   </div>
                 </div>
               )}
-
-              {/* Completed */}
               {tasksByStatus.completed.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
                     Completed ({tasksByStatus.completed.length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {tasksByStatus.completed.map(task => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
+                    {tasksByStatus.completed.map(t => <TaskCard key={t.id} task={t} />)}
                   </div>
                 </div>
               )}

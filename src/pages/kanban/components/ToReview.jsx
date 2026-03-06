@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Calendar, User, CheckCircle, Building2, Layers, Search, Filter, RefreshCw } from 'lucide-react';
+import { ClipboardCheck, Calendar, User, Users, CheckCircle, Building2, Layers, Search, Filter, RefreshCw } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 
 const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
@@ -22,7 +22,6 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
         .from('branches')
         .select('id, name')
         .order('name');
-
       if (error) throw error;
       setBranches(data || []);
     } catch (err) {
@@ -35,7 +34,6 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
       setLoading(true);
       setError(null);
 
-      // First, get all completed tasks that aren't confirmed
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
@@ -44,85 +42,78 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
         .order('completed_at', { ascending: false });
 
       if (tasksError) throw tasksError;
-
       if (!tasksData || tasksData.length === 0) {
         setTasks([]);
         setLoading(false);
         return;
       }
 
-      // Get unique user IDs
-      const userIds = [...new Set([
-        ...tasksData.map(t => t.assigned_to).filter(Boolean),
-        ...tasksData.map(t => t.created_by).filter(Boolean)
-      ])];
+      const taskIds    = tasksData.map(t => t.id);
+      const branchIds  = [...new Set(tasksData.map(t => t.branch_id).filter(Boolean))];
+      const boardIds   = [...new Set(tasksData.map(t => t.board_id).filter(Boolean))];
+      const creatorIds = [...new Set(tasksData.map(t => t.created_by).filter(Boolean))];
 
-      // Get unique branch IDs
-      const branchIds = [...new Set(tasksData.map(t => t.branch_id).filter(Boolean))];
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('task_assignments')
+        .select('task_id, user_id')
+        .in('task_id', taskIds);
 
-      // Get unique board IDs
-      const boardIds = [...new Set(tasksData.map(t => t.board_id).filter(Boolean))];
+      if (assignmentsError) console.error('Error loading assignments:', assignmentsError);
 
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .in('id', userIds);
+      const assigneeUserIds = [...new Set((assignmentsData || []).map(a => a.user_id))];
+      const allUserIds      = [...new Set([...assigneeUserIds, ...creatorIds])];
 
-      if (usersError) throw usersError;
+      const [usersRes, branchesRes, boardsRes] = await Promise.all([
+        allUserIds.length > 0
+          ? supabase.from('users').select('id, full_name').in('id', allUserIds)
+          : Promise.resolve({ data: [] }),
+        branchIds.length > 0
+          ? supabase.from('branches').select('id, name').in('id', branchIds)
+          : Promise.resolve({ data: [] }),
+        boardIds.length > 0
+          ? supabase.from('boards').select('id, name').in('id', boardIds)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      // Fetch branches
-      const { data: branchesData, error: branchesError } = await supabase
-        .from('branches')
-        .select('id, name')
-        .in('id', branchIds);
-
-      if (branchesError) throw branchesError;
-
-      // Fetch boards
-      const { data: boardsData, error: boardsError } = await supabase
-        .from('boards')
-        .select('id, name')
-        .in('id', boardIds);
-
-      if (boardsError) throw boardsError;
-
-      // Create lookup maps
-      const userMap = {};
-      (usersData || []).forEach(user => {
-        userMap[user.id] = user.full_name;
-      });
-
+      const userMap   = {};
       const branchMap = {};
-      (branchesData || []).forEach(branch => {
-        branchMap[branch.id] = branch.name;
+      const boardMap  = {};
+
+      (usersRes.data   || []).forEach(u => { userMap[u.id]   = u.full_name; });
+      (branchesRes.data || []).forEach(b => { branchMap[b.id] = b.name; });
+      (boardsRes.data  || []).forEach(b => { boardMap[b.id]  = b.name; });
+
+      const assigneesByTask = {};
+      (assignmentsData || []).forEach(a => {
+        const name = userMap[a.user_id];
+        if (!name) return;
+        if (!assigneesByTask[a.task_id]) assigneesByTask[a.task_id] = [];
+        if (!assigneesByTask[a.task_id].includes(name)) {
+          assigneesByTask[a.task_id].push(name);
+        }
       });
 
-      const boardMap = {};
-      (boardsData || []).forEach(board => {
-        boardMap[board.id] = board.name;
-      });
+      const enhancedTasks = tasksData.map(task => {
+        let assignees = assigneesByTask[task.id] || [];
+        if (assignees.length === 0 && task.assigned_to && userMap[task.assigned_to]) {
+          assignees = [userMap[task.assigned_to]];
+        }
 
-      // Enhance tasks with related data
-      const enhancedTasks = tasksData.map(task => ({
-        ...task,
-        assigned_user: task.assigned_to ? {
-          id: task.assigned_to,
-          full_name: userMap[task.assigned_to] || 'Unknown'
-        } : null,
-        created_user: task.created_by ? {
-          id: task.created_by,
-          full_name: userMap[task.created_by] || 'Unknown'
-        } : null,
-        branches: task.branch_id ? {
-          id: task.branch_id,
-          name: branchMap[task.branch_id] || 'Unknown Branch'
-        } : null,
-        boards: task.board_id ? {
-          id: task.board_id,
-          name: boardMap[task.board_id] || 'Unknown Board'
-        } : null
-      }));
+        return {
+          ...task,
+          assignees,
+          assigned_user: task.assigned_to ? {
+            id:        task.assigned_to,
+            full_name: userMap[task.assigned_to] || 'Unknown'
+          } : null,
+          created_user: task.created_by ? {
+            id:        task.created_by,
+            full_name: userMap[task.created_by] || 'Unknown'
+          } : null,
+          branches: task.branch_id ? { id: task.branch_id, name: branchMap[task.branch_id] || 'Unknown Branch' } : null,
+          boards:   task.board_id  ? { id: task.board_id,  name: boardMap[task.board_id]  || 'Unknown Board'  } : null,
+        };
+      });
 
       setTasks(enhancedTasks);
     } catch (err) {
@@ -135,31 +126,18 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
   };
 
   const handleConfirmTask = async (taskId) => {
-    if (!currentUser?.id) {
-      alert('User not authenticated');
-      return;
-    }
-
+    if (!currentUser?.id) { alert('User not authenticated'); return; }
     try {
       setConfirming(taskId);
       setError(null);
-
       const { error } = await supabase.rpc('archive_task_to_history', {
         task_uuid: taskId,
         confirming_user_id: currentUser.id
       });
-
       if (error) throw error;
-
       setTasks(prev => prev.filter(t => t.id !== taskId));
-      
-      if (onTaskConfirm) {
-        onTaskConfirm(taskId);
-      }
-      if (onRefresh) {
-        onRefresh();
-      }
-
+      if (onTaskConfirm) onTaskConfirm(taskId);
+      if (onRefresh)     onRefresh();
     } catch (err) {
       console.error('Error confirming task:', err);
       alert(`Failed to confirm task: ${err.message || 'Unknown error'}`);
@@ -172,64 +150,43 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
       });
-    } catch {
-      return 'Invalid date';
-    }
+    } catch { return 'Invalid date'; }
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
+        month: 'short', day: 'numeric', year: 'numeric'
       });
-    } catch {
-      return 'Invalid date';
-    }
+    } catch { return 'Invalid date'; }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-700 border-red-300';
-      case 'medium':
-        return 'bg-amber-100 text-amber-700 border-amber-300';
-      case 'low':
-        return 'bg-green-100 text-green-700 border-green-300';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
+      case 'high':   return 'bg-red-100 text-red-700 border-red-300';
+      case 'medium': return 'bg-amber-100 text-amber-700 border-amber-300';
+      case 'low':    return 'bg-green-100 text-green-700 border-green-300';
+      default:       return 'bg-gray-100 text-gray-700 border-gray-300';
     }
   };
 
-  const getFilteredTasks = () => {
-    let filtered = tasks;
-
-    if (filterBranch !== 'all') {
-      filtered = filtered.filter(task => task.branch_id === filterBranch);
-    }
-
+  const filteredTasks = tasks.filter(task => {
+    if (filterBranch !== 'all' && task.branch_id !== filterBranch) return false;
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(task => 
-        task.title?.toLowerCase().includes(query) ||
-        task.description?.toLowerCase().includes(query) ||
-        task.assigned_user?.full_name?.toLowerCase().includes(query) ||
-        task.branches?.name?.toLowerCase().includes(query)
+      const q = searchQuery.toLowerCase();
+      return (
+        task.title?.toLowerCase().includes(q)              ||
+        task.description?.toLowerCase().includes(q)        ||
+        task.assignees?.some(n => n.toLowerCase().includes(q)) ||
+        task.branches?.name?.toLowerCase().includes(q)
       );
     }
-
-    return filtered;
-  };
-
-  const filteredTasks = getFilteredTasks();
+    return true;
+  });
 
   if (loading) {
     return (
@@ -244,7 +201,6 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
 
   return (
     <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
-      {/* Header */}
       <div className="bg-white border-b px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -256,23 +212,17 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
               <p className="text-sm text-gray-600">Completed tasks awaiting confirmation</p>
             </div>
           </div>
-          <button
-            onClick={loadPendingTasks}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Refresh"
-          >
+          <button onClick={loadPendingTasks} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Refresh">
             <RefreshCw className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -284,7 +234,6 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-
           <div className="relative min-w-[200px]">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
@@ -294,16 +243,13 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
             >
               <option value="all">All Branches</option>
               {branches.map(branch => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
               ))}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Stats Bar */}
       <div className="bg-white border-b px-6 py-3">
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
@@ -319,7 +265,6 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
         </div>
       </div>
 
-      {/* Tasks List */}
       <div className="flex-1 overflow-y-auto p-6">
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -330,7 +275,7 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
               {tasks.length === 0 ? 'All Caught Up!' : 'No Results Found'}
             </h3>
             <p className="text-gray-600 max-w-md">
-              {tasks.length === 0 
+              {tasks.length === 0
                 ? 'There are no completed tasks waiting for review at the moment.'
                 : 'Try adjusting your search or filter criteria.'}
             </p>
@@ -356,9 +301,10 @@ const ToReviewView = ({ currentUser, onTaskConfirm, onRefresh }) => {
 };
 
 const TaskReviewCard = ({ task, onConfirm, confirming, formatDateTime, formatDate, getPriorityColor }) => {
+  const hasMultiple = (task.assignees?.length || 0) > 1;
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden">
-      {/* Header */}
       <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
@@ -375,16 +321,11 @@ const TaskReviewCard = ({ task, onConfirm, confirming, formatDateTime, formatDat
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-          {task.title}
-        </h3>
+        <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{task.title}</h3>
 
         {task.description && (
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-            {task.description}
-          </p>
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{task.description}</p>
         )}
 
         <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
@@ -394,21 +335,28 @@ const TaskReviewCard = ({ task, onConfirm, confirming, formatDateTime, formatDat
 
         <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
           <div>
-            <span className="text-gray-500 block mb-1">Assigned To:</span>
-            <div className="flex items-center gap-1">
-              <User className="w-3 h-3 text-gray-400" />
-              <span className="font-medium text-gray-900 truncate">
-                {task.assigned_user?.full_name || 'Unassigned'}
-              </span>
-            </div>
+            <span className="text-gray-500 block mb-1 flex items-center gap-1">
+              {hasMultiple ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
+              {hasMultiple ? 'Assigned To' : 'Assigned To'}:
+            </span>
+            {task.assignees?.length > 0 ? (
+              <div className="space-y-0.5">
+                {task.assignees.map((name, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="font-medium text-gray-900 truncate">{name}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span className="font-medium text-gray-400">Unassigned</span>
+            )}
           </div>
+
           <div>
             <span className="text-gray-500 block mb-1">Completed:</span>
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3 text-gray-400" />
-              <span className="font-medium text-gray-900">
-                {formatDate(task.completed_at)}
-              </span>
+              <span className="font-medium text-gray-900">{formatDate(task.completed_at)}</span>
             </div>
           </div>
         </div>
@@ -422,9 +370,7 @@ const TaskReviewCard = ({ task, onConfirm, confirming, formatDateTime, formatDat
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Completed:</span>
-            <span className="font-medium text-gray-900">
-              {formatDateTime(task.completed_at)}
-            </span>
+            <span className="font-medium text-gray-900">{formatDateTime(task.completed_at)}</span>
           </div>
         </div>
 
@@ -438,15 +384,9 @@ const TaskReviewCard = ({ task, onConfirm, confirming, formatDateTime, formatDat
           }`}
         >
           {confirming ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Confirming...</span>
-            </>
+            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div><span>Confirming...</span></>
           ) : (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              <span>Confirm & Archive</span>
-            </>
+            <><CheckCircle className="w-4 h-4" /><span>Confirm & Archive</span></>
           )}
         </button>
       </div>

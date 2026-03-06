@@ -25,7 +25,6 @@ const TaskCard = ({ task, onEdit, onDelete, onViewDetails, canDelete, isDragging
       }`}
       onClick={() => onViewDetails(task)}
     >
-      {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <h3 className="font-semibold text-gray-900 text-sm flex-1 pr-2 line-clamp-2">
           {task.title}
@@ -81,24 +80,20 @@ const TaskCard = ({ task, onEdit, onDelete, onViewDetails, canDelete, isDragging
         </div>
       </div>
 
-      {/* Description */}
       {task.description && (
         <p className="text-xs text-gray-600 mb-3 line-clamp-2">
           {task.description}
         </p>
       )}
 
-      {/* Priority Badge */}
       <div className="mb-3">
         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${priorityColors[task.priority] || priorityColors.medium}`}>
           {task.priority?.charAt(0).toUpperCase() + task.priority?.slice(1)}
         </span>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center space-x-3">
-          {/* Assigned User */}
           {task.assigned_user && (
             <div className="flex items-center" title={task.assigned_user.name}>
               <User size={14} className="mr-1" />
@@ -106,7 +101,6 @@ const TaskCard = ({ task, onEdit, onDelete, onViewDetails, canDelete, isDragging
             </div>
           )}
           
-          {/* Due Date */}
           {task.due_date && (
             <div className={`flex items-center ${isOverdue ? 'text-red-600' : ''}`} title="Due date">
               <Calendar size={14} className="mr-1" />
@@ -115,7 +109,6 @@ const TaskCard = ({ task, onEdit, onDelete, onViewDetails, canDelete, isDragging
           )}
         </div>
 
-        {/* Comment Count */}
         {task.comment_count > 0 && (
           <div className="flex items-center">
             <MessageSquare size={14} className="mr-1" />

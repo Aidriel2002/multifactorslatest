@@ -178,16 +178,13 @@ const Notifications = ({ currentUser, onNotificationClick }) => {
     
     setIsOpen(false);
     
-    // Handle task_completed notifications - redirect to review page
     if (notification.type === 'task_completed') {
-      // Use the onNotificationClick callback to change view to 'review'
       if (onNotificationClick) {
         onNotificationClick({ type: 'navigate_to_review' });
       }
       return;
     }
     
-    // For other notifications, use the provided callback
     if (onNotificationClick) {
       onNotificationClick(notification);
     }

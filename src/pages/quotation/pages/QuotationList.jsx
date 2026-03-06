@@ -109,7 +109,7 @@ function QuotationList() {
   return (
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
-      <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
+      <div className="flex-1 overflow-y-auto" >
         <QuotationNavbar 
           title="Quotations" 
           subtitle="Manage all your quotations"

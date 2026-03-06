@@ -22,6 +22,7 @@ function CreateQuotation2() {
     customerName: '',
     position: '',
     address: '',
+    subject: '',
     greeting: 'Dear Sir/Madam,',
     introduction: 'We are pleased to offer to you our premium services. Please see below for the scope and delivery of materials needed.',
     scopeOfWork: '',
@@ -215,10 +216,12 @@ function CreateQuotation2() {
         .from('quotations')
         .insert([{
           quotation_type: 'quotation2',
+          reference_number: formData.referenceNumber,
           company_name: formData.companyName,
           customer_name: formData.customerName,
           position: formData.position,
           address: formData.address,
+          subject: formData.subject,
           greeting: formData.greeting,
           introduction: formData.introduction,
           scope_of_work: formData.scopeOfWork,
@@ -311,6 +314,7 @@ function CreateQuotation2() {
           customerName: '',
           position: '',
           address: '',
+          subject: '',
           greeting: 'Dear Sir/Madam,',
           introduction: 'We are pleased to offer to you our premium services. Please see below for the scope and delivery of materials needed.',
           scopeOfWork: '',
@@ -358,7 +362,7 @@ function CreateQuotation2() {
     return (
       <div className="flex h-screen bg-gray-50">
         <QuotationSideBar />
-        <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="flex-1 overflow-y-auto flex items-center justify-center" >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
             <p className="mt-4 text-gray-600">
@@ -373,7 +377,7 @@ function CreateQuotation2() {
   return (
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
-      <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
+      <div className="flex-1 overflow-y-auto">
         <QuotationNavbar 
           title="Create Quotation 2" 
           subtitle="Fill in the quotation details"
@@ -497,6 +501,20 @@ function CreateQuotation2() {
                     placeholder="Enter company address"
                   />
                 </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subject
+                    </label>
+                    <textarea
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      rows="3"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Enter subject"
+                    />
+                  </div>
               </div>
             </div>
 

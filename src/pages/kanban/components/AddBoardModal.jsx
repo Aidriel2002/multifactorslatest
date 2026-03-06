@@ -22,7 +22,6 @@ const AddBoardModal = ({ isOpen, onClose, onSubmit, existingBoards, saving }) =>
       return;
     }
 
-    // Check for duplicate names (case-insensitive)
     const isDuplicate = existingBoards.some(
       board => board.name.toLowerCase() === trimmedName.toLowerCase()
     );

@@ -1,143 +1,78 @@
 import { supabase } from '../lib/supabase';
 
-let notificationQueue = [];
-let batchTimeout = null;
-
 // ── Send push via Supabase Edge Function ───────────────────────────
+// The DB triggers now handle all in-app notification inserts.
+// These JS functions only send push notifications (web push / FCM).
+
 async function sendPush(userIds, title, message, url = '/') {
+  if (!userIds || userIds.length === 0) return;
   try {
     await supabase.functions.invoke('send-push', {
       body: { user_ids: userIds, title, message, url }
-    })
+    });
   } catch (err) {
-    console.error('Push send error:', err)
+    console.error('[Push] Error:', err);
   }
 }
 
-async function processBatch() {
-  if (notificationQueue.length === 0) return;
-  
-  const batch = [...notificationQueue];
-  notificationQueue = [];
-  
+// ── Get ALL unique user IDs assigned to a task ─────────────────────
+// Used only for targeting push notifications.
+async function getAllAssignedUserIds(taskId, currentUserId = null) {
+  if (!taskId) return [];
+
   try {
-    const { error } = await supabase.from('notifications').insert(batch);
-    if (error) console.error('Batch notification insert error:', error);
-  } catch (error) {
-    console.error('Batch notification error:', error);
-  }
-}
+    const [assignmentsResult, taskResult] = await Promise.all([
+      supabase
+        .from('task_assignments')
+        .select('user_id')
+        .eq('task_id', taskId),
+      supabase
+        .from('tasks')
+        .select('assigned_to, created_by')
+        .eq('id', taskId)
+        .single()
+    ]);
 
-function queueNotification(notification) {
-  notificationQueue.push(notification);
-  if (batchTimeout) clearTimeout(batchTimeout);
-  batchTimeout = setTimeout(processBatch, 100);
-}
+    const assignmentIds = (assignmentsResult.data || []).map(a => a.user_id);
+    const createdById   = taskResult.data?.created_by || null;
 
-// Always fetch fresh assigned users from DB to catch ALL staff on a task
-async function getAllAssignedUserIds(taskId, currentUserId) {
-  try {
-    const { data, error } = await supabase
-      .from('task_assignments')
-      .select('user_id')
-      .eq('task_id', taskId);
+    // Fallback to legacy assigned_to only if junction table is empty
+    let fallbackIds = [];
+    if (assignmentIds.length === 0 && taskResult.data?.assigned_to) {
+      fallbackIds = [taskResult.data.assigned_to];
+    }
 
-    if (error) throw error;
+    const allIds = [...assignmentIds, ...fallbackIds, ...(createdById ? [createdById] : [])];
+    return [...new Set(allIds)].filter(id => id && id !== currentUserId);
 
-    const ids = (data || [])
-      .map(a => a.user_id)
-      .filter(id => id && id !== currentUserId);
-
-    return [...new Set(ids)];
   } catch (err) {
-    console.error('Error fetching assigned users for notification:', err);
+    console.error('[Push] getAllAssignedUserIds threw:', err);
     return [];
   }
 }
 
+// ── Notify status change (push only) ──────────────────────────────
 export async function notifyTaskStatusChange(task, newStatus, currentUserId = null) {
   if (!task?.id) return;
-
   const userIds = await getAllAssignedUserIds(task.id, currentUserId);
   if (userIds.length === 0) return;
-
-  const statusLabels = {
-    'todo': 'To Do',
-    'in-progress': 'In Progress',
-    'validating': 'Validating',
-    'completed': 'Completed'
-  };
-
-  const notificationType = newStatus === 'completed' ? 'task_completed' : 'task_moved';
-  const title = 'Task Status Updated'
-  const message = `Task "${task.title}" moved to ${statusLabels[newStatus] || newStatus}`;
-
-  userIds.forEach(userId => {
-    queueNotification({
-      user_id: userId,
-      type: notificationType,
-      title,
-      message,
-      task_id: task.id,
-      is_read: false,
-      created_at: new Date().toISOString()
-    });
-  });
-
-  // ── Send push notification ──
-  await sendPush(userIds, title, message, '/kanban')
+  const statusLabels = { 'todo': 'To Do', 'in-progress': 'In Progress', 'validating': 'Validating', 'completed': 'Completed' };
+  await sendPush(userIds, 'Task Status Updated', `Task "${task.title}" moved to ${statusLabels[newStatus] || newStatus}`, '/kanban');
 }
 
-export async function notifyNewComment(task, commentText, commenterName, currentUserId = null) {
+// ── Notify new comment (push only) ────────────────────────────────
+export async function notifyNewComment(task, commentText, commenterName, currentUserId = null, commentId = null) {
   if (!task?.id) return;
-
   const userIds = await getAllAssignedUserIds(task.id, currentUserId);
   if (userIds.length === 0) return;
-
-  const truncated = commentText.length > 50
-    ? commentText.substring(0, 50) + '...'
-    : commentText;
-
-  const title = 'New Comment'
-  const message = `${commenterName} commented on "${task.title}": ${truncated}`;
-
-  userIds.forEach(userId => {
-    queueNotification({
-      user_id: userId,
-      type: 'new_comment',
-      title,
-      message,
-      task_id: task.id,
-      is_read: false,
-      created_at: new Date().toISOString()
-    });
-  });
-
-  // ── Send push notification ──
-  await sendPush(userIds, title, message, '/kanban')
+  const truncated = commentText && commentText.length > 50 ? commentText.substring(0, 50) + '...' : commentText || '[attachment]';
+  await sendPush(userIds, 'New Comment', `${commenterName} commented on "${task.title}": ${truncated}`, '/kanban');
 }
 
+// ── Notify task assigned (push only) ──────────────────────────────
 export async function notifyTaskAssigned(task, assignedUserIds, currentUserId = null) {
   if (!task?.id || !assignedUserIds?.length) return;
-
-  const usersToNotify = assignedUserIds.filter(id => id !== currentUserId);
+  const usersToNotify = [...new Set(assignedUserIds)].filter(id => id && id !== currentUserId);
   if (usersToNotify.length === 0) return;
-
-  const title = 'Task Assigned'
-  const message = `You have been assigned to task "${task.title}"`
-
-  usersToNotify.forEach(userId => {
-    queueNotification({
-      user_id: userId,
-      type: 'task_assigned',
-      title,
-      message,
-      task_id: task.id,
-      is_read: false,
-      created_at: new Date().toISOString()
-    });
-  });
-
-  // ── Send push notification ──
-  await sendPush(usersToNotify, title, message, '/kanban')
+  await sendPush(usersToNotify, 'Task Assigned', `You have been assigned to task "${task.title}"`, '/kanban');
 }

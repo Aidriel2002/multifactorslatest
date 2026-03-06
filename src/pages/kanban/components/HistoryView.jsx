@@ -179,7 +179,7 @@ const enrichWithAssignments = async (dedupedRows) => {
 
   // Read assignments from the VIEW (same as KanbanBoard)
   const { data: assignmentsData, error: assignmentsError } = await supabase
-    .from('task_assigned_users')
+    .from('task_assignments')
     .select('task_id, user_id, assigned_at, assigned_by')
     .in('task_id', taskIds);
 

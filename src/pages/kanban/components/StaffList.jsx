@@ -13,7 +13,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
   useEffect(() => {
     loadStaffData();
 
-    // Set up real-time subscriptions
     const staffBranchesChannel = supabase
       .channel('staff_branches_changes')
       .on(
@@ -24,7 +23,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
           table: 'staff_branches'
         },
         () => {
-          console.log('Staff-branch assignment changed, reloading...');
           loadStaffData();
         }
       )
@@ -41,7 +39,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
           filter: 'role=eq.staff'
         },
         () => {
-          console.log('Staff data changed, reloading...');
           loadStaffData();
         }
       )
@@ -57,13 +54,11 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
           table: 'branches'
         },
         () => {
-          console.log('Branch data changed, reloading...');
           loadStaffData();
         }
       )
       .subscribe();
 
-    // Add subscription for task_assignments to catch auto-assignments
     const taskAssignmentsChannel = supabase
       .channel('task_assignments_changes')
       .on(
@@ -74,8 +69,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
           table: 'task_assignments'
         },
         () => {
-          console.log('Task assignment changed, reloading staff list...');
-          // Small delay to allow trigger to complete
           setTimeout(() => loadStaffData(), 500);
         }
       )
@@ -93,7 +86,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
     try {
       setLoading(true);
 
-      // Get all branches
       const { data: branchesData, error: branchesError } = await supabase
         .from('branches')
         .select('*')
@@ -101,7 +93,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
 
       if (branchesError) throw branchesError;
 
-      // Get all staff users
       const { data: staffData, error: staffError } = await supabase
         .from('users')
         .select('id, full_name, email')
@@ -111,7 +102,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
 
       if (staffError) throw staffError;
 
-      // Get staff branch assignments from staff_branches table
       const { data: staffBranchesData, error: staffBranchesError } = await supabase
         .from('staff_branches')
         .select('staff_id, branch_id');
@@ -120,32 +110,25 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
         console.error('Error loading staff branches:', staffBranchesError);
       }
 
-      // Group staff by branch - ALLOW MULTIPLE BRANCHES PER STAFF
       const staffGrouped = {};
       
-      // Initialize all branches with empty arrays
       branchesData?.forEach(branch => {
         staffGrouped[branch.id] = [];
       });
 
-      // Add "Unassigned" category
       staffGrouped['unassigned'] = [];
 
-      // Create a Set to track which staff have been assigned to at least one branch
       const assignedStaffIds = new Set();
 
-      // Add staff to ALL their assigned branches
       if (staffBranchesData && staffBranchesData.length > 0) {
         staffBranchesData.forEach(assignment => {
           if (!assignment.staff_id || !assignment.branch_id) return;
           
           assignedStaffIds.add(assignment.staff_id);
           
-          // Find the staff member
           const staff = staffData?.find(s => s.id === assignment.staff_id);
           
           if (staff && staffGrouped[assignment.branch_id]) {
-            // Check if staff is already in this branch (avoid duplicates)
             const existingStaff = staffGrouped[assignment.branch_id].find(s => s.id === staff.id);
             if (!existingStaff) {
               staffGrouped[assignment.branch_id].push(staff);
@@ -154,7 +137,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
         });
       }
 
-      // Add unassigned staff (those not in any branch)
       staffData?.forEach(staff => {
         if (!assignedStaffIds.has(staff.id)) {
           staffGrouped['unassigned'].push(staff);
@@ -164,7 +146,6 @@ const StaffList = ({ onStaffSelect, selectedStaffId }) => {
       setBranches(branchesData || []);
       setStaffByBranch(staffGrouped);
 
-      // Auto-select a random staff member ONLY once on first load
       const allStaff = staffData || [];
       if (allStaff.length > 0 && !hasSelectedRandom.current && !selectedStaffId && onStaffSelect) {
         const randomStaff = allStaff[Math.floor(Math.random() * allStaff.length)];

@@ -69,6 +69,7 @@ import AdminSidebar from './components/AdminSidebar'
 import EmployeeSidebar from './components/EmployeeSidebar'
 import AuthModal from './components/AuthModal'
 import AccountLogin from './components/AccountLogin'
+import PWAInstallBanner from './components/PWAInstallBanner';
 
 const LandingPage = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -381,6 +382,7 @@ function App() {
           </div>
         </div>
         
+         <PWAInstallBanner />
         <ConditionalChatButton />
       </AuthProvider>
     </BrowserRouter>

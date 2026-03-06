@@ -365,7 +365,7 @@ function CreateQuotation1() {
     return (
       <div className="flex h-screen bg-gray-50">
         <QuotationSideBar />
-        <div className="flex-1 overflow-y-auto flex items-center justify-center" style={{ marginLeft: '16rem' }}>
+        <div className="flex-1 overflow-y-auto flex items-center justify-center" >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500 mx-auto"></div>
             <p className="mt-4 text-gray-600">
@@ -380,7 +380,7 @@ function CreateQuotation1() {
   return (
     <div className="flex h-screen bg-gray-50">
       <QuotationSideBar />
-      <div className="flex-1 overflow-y-auto" style={{ marginLeft: '16rem' }}>
+      <div className="flex-1 overflow-y-auto" >
         <QuotationNavbar 
           title="Create Quotation 1" 
           subtitle="Fill in the quotation details"

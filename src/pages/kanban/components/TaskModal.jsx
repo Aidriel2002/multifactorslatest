@@ -17,12 +17,10 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
 
   useEffect(() => {
     if (task) {
-      // Handle assigned_users array from junction table
       let assignedIds = [];
       if (task.assigned_users && Array.isArray(task.assigned_users)) {
         assignedIds = task.assigned_users.map(u => u.id);
       } else if (task.assigned_to) {
-        // Fallback to single assigned_to
         assignedIds = [task.assigned_to];
       }
       
@@ -96,7 +94,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
     setShowStaffDropdown(false);
   };
 
-  // Remove staff from assigned list
   const removeStaff = (userId) => {
     setFormData({
       ...formData,
@@ -104,12 +101,10 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
     });
   };
 
-  // Get user details by ID
   const getUserById = (userId) => {
     return users.find(user => user.id === userId);
   };
 
-  // Filter available staff (not already assigned)
   const availableStaff = users.filter(user => 
     !formData.assigned_to.includes(user.id) &&
     (user.name || user.full_name || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -121,7 +116,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         
-        {/* Header */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">
             {task ? 'Edit Task' : 'Create New Task'}
@@ -138,7 +132,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
 
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Task Title <span className="text-red-500">*</span>
@@ -163,7 +156,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             )}
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Description
@@ -180,7 +172,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             />
           </div>
 
-          {/* Status & Priority */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             <div>
@@ -221,17 +212,14 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             </div>
           </div>
 
-          {/* Assign Staff (Multi-select) & Due Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            {/* Assign To Multiple Staff */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <UserPlus size={16} className="inline mr-1" />
                 Assign Staff
               </label>
 
-              {/* Selected Staff Tags */}
               {formData.assigned_to.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.assigned_to.map(userId => {
@@ -257,7 +245,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
                 </div>
               )}
 
-              {/* Add Staff Input */}
               <div className="relative">
                 <input
                   type="text"
@@ -272,7 +259,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
                   disabled={saving}
                 />
 
-                {/* Staff Dropdown */}
                 {showStaffDropdown && availableStaff.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                     {availableStaff.map((user) => (
@@ -294,7 +280,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
                   </div>
                 )}
 
-                {/* No staff available message */}
                 {showStaffDropdown && availableStaff.length === 0 && searchTerm && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-sm text-gray-500">
                     No staff found
@@ -302,7 +287,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
                 )}
               </div>
 
-              {/* Clear all button */}
               {formData.assigned_to.length > 0 && (
                 <button
                   type="button"
@@ -315,7 +299,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
               )}
             </div>
 
-            {/* Due Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar size={16} className="inline mr-1" />
@@ -333,7 +316,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             </div>
           </div>
 
-          {/* Assignment Summary */}
           {formData.assigned_to.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
@@ -342,7 +324,6 @@ const TaskModal = ({ isOpen, onClose, onSubmit, task, users = [], saving }) => {
             </div>
           )}
 
-          {/* Buttons */}
           <div className="flex items-center justify-end space-x-4 pt-4 border-t">
             <button
               type="button"

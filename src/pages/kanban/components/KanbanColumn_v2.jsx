@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, MoreVertical, Calendar, User, Play, ArrowRight, CheckCircle } from 'lucide-react';
-import { notifyTaskStatusChange } from '../../../utils/notificationHelpers';
+import { notifyTaskStatusChange } from '../../../utils/NotificationHelpers';
 
 const KanbanColumn = ({ 
   column, 

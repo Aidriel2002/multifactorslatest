@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Edit2, Trash2, Image, Mic, X, Play, Pause, StopCircle, MoreVertical, Clock } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
+import { notifyNewComment } from '../../../utils/NotificationHelpers';
 
 const CommentSection = ({ task, currentUser }) => {
   const [comments, setComments] = useState([]);
@@ -250,19 +251,29 @@ const CommentSection = ({ task, currentUser }) => {
         audioUrl = await uploadFile(audioFile, 'task-audio', 'comments');
       }
 
-      const { error } = await supabase
-        .from('task_comments')
-        .insert([
-          {
-            task_id: task.id,
-            user_id: currentUser.id,
-            comment: newComment.trim() || null,
-            image_url: imageUrl,
-            audio_url: audioUrl
-          }
-        ]);
+      const { data: insertedComment, error } = await supabase
+          .from('task_comments')
+          .insert([
+            {
+              task_id: task.id,
+              user_id: currentUser.id,
+              comment: newComment.trim() || null,
+              image_url: imageUrl,
+              audio_url: audioUrl
+            }
+          ])
+          .select('id')
+          .single();
 
-      if (error) throw error;
+        if (error) throw error;
+
+const notifyResult = await notifyNewComment(
+  task,
+  newComment.trim() || (selectedImage ? '[Image]' : '[Voice Note]'),
+  currentUser?.full_name || currentUser?.name || 'Someone',
+  currentUser.id,
+  insertedComment?.id
+);
 
       setNewComment('');
       removeImage();
